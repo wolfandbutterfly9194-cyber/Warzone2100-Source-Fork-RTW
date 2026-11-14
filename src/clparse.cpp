@@ -1407,6 +1407,8 @@ const std::string &saveandquit_enabled()
 	return wz_saveandquit;
 }
 
+void usaSetSkirmishTestName(const std::string &name) { wz_test = name; }
+
 const std::string &wz_skirmish_test()
 {
 	return wz_test;

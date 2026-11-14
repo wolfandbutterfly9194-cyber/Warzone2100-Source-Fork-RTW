@@ -38,6 +38,7 @@ bool ParseCommandLineDebugFlags(int argc, const char * const *argv);
 bool autogame_enabled();
 const std::string &saveandquit_enabled();
 const std::string &wz_skirmish_test();
+void usaSetSkirmishTestName(const std::string &name);
 bool streamer_spectator_mode();
 bool lobby_slashcommands_enabled();
 const std::string& cli_lobby_game_to_connect_str();

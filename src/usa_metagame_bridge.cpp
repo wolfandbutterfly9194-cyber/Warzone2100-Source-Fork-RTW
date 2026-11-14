@@ -2,6 +2,8 @@
 #include <cstdio>
 #include <SDL3/SDL_events.h>
 #include "usa_metagame_bridge.h"
+#include "usa_overworld_ui.h"
+#include "usa_battle_setup.h"
 
 #include "lib/framework/frame.h"
 #include "lib/framework/input.h"
@@ -154,103 +156,26 @@ namespace
 }
 void startUsaPrebattleScreen()
 {
-	if (screenInitialized) return;
-
-	widgDelete(psWScreen, FRONTEND_BOTFORM);
-	widgDelete(psWScreen, FRONTEND_TOPFORM);
-
-	BriefingData info = loadBriefingJson();
-	isBaseBuildMode = (info.mode == "base");
-
-	auto root = psWScreen->psForm;
-
-	const int panelW = 680;
-	const int panelH = 440;
-	const int panelX = (pie_GetVideoBufferWidth() - panelW) / 2;
-	const int panelY = (pie_GetVideoBufferHeight() - panelH) / 2;
-
-	auto panel = std::make_shared<IntFormAnimated>(false);
-	root->attach(panel);
-	panel->id = ID_USA_PANEL;
-	panel->setGeometry(panelX, panelY, panelW, panelH);
-
-	makeBriefingLabel(panel, 24, 18, panelW - 48, 28, "THE PROJECT // TACTICAL DEPLOYMENT BRIEFING", WLAB_ALIGNCENTRE, WZCOL_YELLOW);
-	makeBriefingLabel(panel, 24, 58, panelW - 48, 22, "TARGET SECTOR: " + info.stateName + " (" + info.mapName + ")");
-	makeBriefingLabel(panel, 24, 84, panelW - 48, 22, "OCCUPYING FACTION: " + info.factionName, WLAB_ALIGNLEFT, isBaseBuildMode ? WZCOL_GREEN : WZCOL_RED);
-	makeBriefingLabel(panel, 24, 110, panelW - 48, 22, "CAMPAIGN TURN: " + std::to_string(info.turn) + "   |   STRATEGIC POWER: " + std::to_string(info.power));
-
-	makeBriefingLabel(panel, 24, 150, 300, 22, "ACTIVE TECH RESEARCH:", WLAB_ALIGNLEFT, WZCOL_YELLOW);
-	if (info.techs.empty())
-	{
-		makeBriefingLabel(panel, 32, 176, 290, 20, "- Standard Issue Only", WLAB_ALIGNLEFT, WZCOL_TEXT_MEDIUM);
-	}
-	else
-	{
-		for (size_t i = 0; i < info.techs.size() && i < 6; ++i)
-		{
-			makeBriefingLabel(panel, 32, 176 + static_cast<int>(i) * 22, 290, 20, "+ " + info.techs[i]);
-		}
-	}
-
-	makeBriefingLabel(panel, 350, 150, 300, 22, "STRIKE SQUAD DROP ROSTER:", WLAB_ALIGNLEFT, WZCOL_YELLOW);
-	if (info.squad.empty())
-	{
-		makeBriefingLabel(panel, 358, 176, 290, 20, "- Base HQ Drop Only", WLAB_ALIGNLEFT, WZCOL_TEXT_MEDIUM);
-	}
-	else
-	{
-		for (size_t i = 0; i < info.squad.size() && i < 6; ++i)
-		{
-			makeBriefingLabel(panel, 358, 176 + static_cast<int>(i) * 22, 290, 20, "* " + info.squad[i]);
-		}
-	}
-
-	makeStyledButton(ID_USA_PANEL, ID_USA_BTN_LAUNCH, 30, panelH - 56, 290, 36, isBaseBuildMode ? "[ ENTER SECTOR BASE ]" : "[ LAUNCH TACTICAL ASSAULT ]");
-	makeStyledButton(ID_USA_PANEL, ID_USA_BTN_ABORT, panelW - 320, panelH - 56, 290, 36, "[ ABORT / RETURN TO MAP ]");
-
-	screenInitialized = true;
+    if (screenInitialized) return;
+    widgDelete(psWScreen, FRONTEND_BOTFORM);
+    widgDelete(psWScreen, FRONTEND_TOPFORM);
+    usaInitOverworldUi();
+    screenInitialized = true;
 }
 
 void runUsaPrebattleTick()
 {
-	if (!screenInitialized)
-	{
-		startUsaPrebattleScreen();
-	}
-
-	WidgetTriggers const& triggers = widgRunScreen(psWScreen);
-	unsigned id = triggers.empty() ? 0 : triggers.front().widget->id;
-
-	widgDisplayScreen(psWScreen);
-
-	if (id == ID_USA_BTN_ABORT || keyPressed(KEY_ESC))
-	{
-		bUsaPrebattle = false;
-		bUsaStripVanillaLobby = false;
-		bUsaSessionActive = false;
-		screenInitialized = false;
-		std::exit(0);
-	}
-
-	if (id == ID_USA_BTN_LAUNCH || keyPressed(KEY_RETURN) || keyPressed(KEY_KPENTER))
-	{
-		bUsaPrebattle = false;
-		bUsaStripVanillaLobby = (USA_RESTORE_VANILLA_SKIRMISH == 0);
-		bUsaSessionActive = true;
-		inGameHudAttached = false;
-		screenInitialized = false;
-		widgDelete(psWScreen, ID_USA_PANEL);
-
-		setHostLaunch(HostLaunch::Skirmish);
-		SPinit(LEVEL_TYPE::SKIRMISH);
-		bMultiPlayer = true;
-		ingame.side = InGameSide::HOST_OR_SINGLEPLAYER;
-		game.type = LEVEL_TYPE::SKIRMISH;
-		changeTitleMode(TITLE);
-		changeTitleUI(std::make_shared<WzMultiplayerOptionsTitleUI>(wzTitleUICurrent));
-	}
+    if (!screenInitialized)
+    {
+        startUsaPrebattleScreen();
+    }
+    if (!runUsaOverworldUi())
+    {
+        screenInitialized = false;
+        return;
+    }
+    renderUsaOverworldUi();
 }
-
 void saveUsaBaseSnapshotAndExit()
 {
     std::ostringstream out;
@@ -292,9 +217,12 @@ void saveUsaBaseSnapshotAndExit()
         PHYSFS_close(f);
     }
 
+    usaExportSessionResults(true);
     debug(LOG_INFO, "USA_HUD_SAVE_EXIT_TRIGGERED");
     fflush(nullptr);
-    _exit(0);
+    bUsaSessionActive = false;
+    bUsaPrebattle = true;
+    changeTitleMode(TITLE);
 }
 
 static std::chrono::steady_clock::time_point combatStartTime;
@@ -518,6 +446,7 @@ void updateUsaInGameHud()
     if (!combatTimerStarted)
     {
         combatStartTime = std::chrono::steady_clock::now();
+        usaApplyNativeBattleSetup();
         combatTimerStarted = true;
         opforTriggeredNow = false;
         lastShownSec = -1;

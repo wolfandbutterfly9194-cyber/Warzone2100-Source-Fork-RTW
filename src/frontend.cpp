@@ -1,3 +1,4 @@
+#pragma warning(disable : 4505)
 #include "usa_metagame_bridge.h"
 /*
 	This file is part of Warzone 2100.
@@ -209,53 +210,16 @@ static void closeMissingVideosNotification()
 
 void startTitleMenu()
 {
-	intRemoveReticule();
+intRemoveReticule();
 
-	addBackdrop();
-	addTopForm(false);
-	addBottomForm();
+addBackdrop();
+addTopForm(false);
+addBottomForm();
 
-	addTextButton(FRONTEND_SINGLEPLAYER, FRONTEND_POS2X, FRONTEND_POS2Y, _("Single Player"), WBUT_TXTCENTRE);
-	addTextButton(FRONTEND_MULTIPLAYER, FRONTEND_POS3X, FRONTEND_POS3Y, _("Multi Player"), WBUT_TXTCENTRE);
-	addTextButton(FRONTEND_TUTORIAL, FRONTEND_POS4X, FRONTEND_POS4Y, _("Tutorial"), WBUT_TXTCENTRE);
-	addTextButton(FRONTEND_OPTIONS, FRONTEND_POS5X, FRONTEND_POS5Y, _("Options"), WBUT_TXTCENTRE);
-
-	// check whether video sequences are installed
-	if (seq_hasVideos())
-	{
-		addTextButton(FRONTEND_PLAYINTRO, FRONTEND_POS6X, FRONTEND_POS6Y, _("View Intro"), WBUT_TXTCENTRE);
-	}
-	else
-	{
-		addTextButton(FRONTEND_PLAYINTRO, FRONTEND_POS6X, FRONTEND_POS6Y, _("View Intro"), WBUT_TXTCENTRE | WBUT_DISABLE);
-		widgSetTip(psWScreen, FRONTEND_PLAYINTRO, _("Videos are missing, download them from http://wz2100.net"));
-
-		notifyAboutMissingVideos();
-	}
-
-	if (findLastSave())
-	{
-		addTextButton(FRONTEND_CONTINUE, FRONTEND_POS7X, FRONTEND_POS7Y, _("Continue Last Save"), WBUT_TXTCENTRE);
-	}
-	else
-	{
-		addTextButton(FRONTEND_CONTINUE, FRONTEND_POS7X, FRONTEND_POS7Y, _("Continue Last Save"), WBUT_TXTCENTRE | WBUT_DISABLE);
-		widgSetTip(psWScreen, FRONTEND_CONTINUE, _("No last save available"));
-	}
-	addTextButton(FRONTEND_QUIT, FRONTEND_POS8X, FRONTEND_POS8Y, _("Quit Game"), WBUT_TXTCENTRE);
-	addSideText(FRONTEND_SIDETEXT, FRONTEND_SIDEX, FRONTEND_SIDEY, _("MAIN MENU"));
-
-	addSmallTextButton(FRONTEND_HYPERLINK, FRONTEND_POS9X, FRONTEND_POS9Y, _("Official site: http://wz2100.net/"), 0);
-	widgSetTip(psWScreen, FRONTEND_HYPERLINK, _("Come visit the forums and all Warzone 2100 news! Click this link."));
-	W_BUTTON * pRightAlignedButton = addSmallTextButton(FRONTEND_DONATELINK, FRONTEND_POS9X + 360, FRONTEND_POS9Y, _("Donate: http://donations.wz2100.net/"), 0);
-	moveToParentRightEdge(pRightAlignedButton, 1);
-	widgSetTip(psWScreen, FRONTEND_DONATELINK, _("Help support the project with our server costs, Click this link."));
-	pRightAlignedButton = addSmallTextButton(FRONTEND_CHATLINK, FRONTEND_POS9X + 360, 0, _("Chat with players on Discord or IRC"), 0);
-	moveToParentRightEdge(pRightAlignedButton, 6);
-	widgSetTip(psWScreen, FRONTEND_CHATLINK, _("Connect to Discord or Freenode through webchat by clicking this link."));
-	addMultiBut(psWScreen, FRONTEND_BOTFORM, FRONTEND_UPGRDLINK, 7, 7, MULTIOP_BUTW, MULTIOP_BUTH, _("Check for a newer version"), IMAGE_GAMEVERSION, IMAGE_GAMEVERSION_HI, true);
+addTextButton(FRONTEND_SINGLEPLAYER, FRONTEND_POS3X, FRONTEND_POS3Y, _("Global Reclamation Campaign"), WBUT_TXTCENTRE);
+addTextButton(FRONTEND_OPTIONS, FRONTEND_POS5X, FRONTEND_POS5Y, _("Options"), WBUT_TXTCENTRE);
+addSideText(FRONTEND_SIDETEXT, FRONTEND_SIDEX, FRONTEND_SIDEY, _("GLOBAL RECLAMATION")); (void)&runHyperlink; (void)&runUpgrdHyperlink; (void)&notifyAboutMissingVideos;
 }
-
 void runContinue()
 {
 	SPinit(lastSaveMP ? LEVEL_TYPE::SKIRMISH : LEVEL_TYPE::CAMPAIGN);
@@ -267,7 +231,8 @@ bool runTitleMenu()
 {
 	if (bUsaSessionActive)
 	{
-		std::exit(0);
+		bUsaSessionActive = false;
+		bUsaPrebattle = true;
 	}
 
 	if (bUsaPrebattle)
@@ -292,7 +257,7 @@ bool runTitleMenu()
 #endif
 		break;
 	case FRONTEND_SINGLEPLAYER:
-		changeTitleMode(SINGLE);
+		bUsaPrebattle = true; startUsaPrebattleScreen();
 		break;
 	case FRONTEND_OPTIONS:
 		changeTitleUI(std::make_shared<WzOptionsTitleUI>(wzTitleUICurrent));
