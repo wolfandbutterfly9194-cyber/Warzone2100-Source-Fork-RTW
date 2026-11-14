@@ -4,6 +4,10 @@
 #include "usa_metagame_bridge.h"
 #include "usa_overworld_ui.h"
 #include "usa_battle_setup.h"
+#include "usa_campaign_state.h"
+#include "template.h"
+#include "usa_overworld_ui.h"
+#include "usa_battle_setup.h"
 
 #include "lib/framework/frame.h"
 #include "lib/framework/input.h"
@@ -44,6 +48,7 @@ extern bool radarPermitted;
 #include <vector>
 
 bool scavRallyPending = false;
+int scavWaveNumber = 1;
 std::chrono::steady_clock::time_point scavRallyStartTime;
 
 
@@ -165,15 +170,8 @@ void startUsaPrebattleScreen()
 
 void runUsaPrebattleTick()
 {
-    if (!screenInitialized)
-    {
-        startUsaPrebattleScreen();
-    }
-    if (!runUsaOverworldUi())
-    {
-        screenInitialized = false;
-        return;
-    }
+    if (!screenInitialized) startUsaPrebattleScreen();
+    if (!runUsaOverworldUi()) { screenInitialized = false; return; }
     renderUsaOverworldUi();
 }
 void saveUsaBaseSnapshotAndExit()
@@ -217,6 +215,7 @@ void saveUsaBaseSnapshotAndExit()
         PHYSFS_close(f);
     }
 
+    usaExportSessionResults(true);
     usaExportSessionResults(true);
     debug(LOG_INFO, "USA_HUD_SAVE_EXIT_TRIGGERED");
     fflush(nullptr);
@@ -265,8 +264,8 @@ void usaProduceOpforUnits(bool isScav)
     static int waveRound = 0;
     waveRound++;
 
-    struct ScavSpec { const char* name; const char* body; const char* prop; const char* weap; };
-    static const ScavSpec specs[] = {
+    struct ScavDef { const char* name; const char* body; const char* prop; const char* weap; };
+    static const ScavDef scavDefs[] = {
         { "Scav Raider",     "B1BaBaPerson01",     "BaBaLegs", "BaBaMG"     },
         { "Scav Trike",      "B4body-sml-trike01", "BaBaProp", "Rocket-Pod" },
         { "Scav Buggy",      "B3body-sml-buggy01", "BaBaProp", "Flame1Mk1"  },
@@ -274,12 +273,43 @@ void usaProduceOpforUnits(bool isScav)
         { "Scav Firetruck",  "B2tractor",          "BaBaProp", "Flame1Mk1"  }
     };
 
+    std::vector<DROID_TEMPLATE*> scavTemplates;
+    if (isScav)
+    {
+        for (const auto& sd : scavDefs)
+        {
+            DROID_TEMPLATE* found = nullptr;
+            enumerateTemplates(1, [&](DROID_TEMPLATE* psT) {
+                if (psT && psT->name.toUtf8() == sd.name) { found = psT; return false; }
+                return true;
+            });
+            if (found == nullptr)
+            {
+                int bIdx = getCompFromID(COMP_BODY, WzString::fromUtf8(sd.body));
+                int pIdx = getCompFromID(COMP_PROPULSION, WzString::fromUtf8(sd.prop));
+                int wIdx = getCompFromID(COMP_WEAPON, WzString::fromUtf8(sd.weap));
+                if (bIdx < 0) bIdx = getCompFromID(COMP_BODY, WzString::fromUtf8("Body1REC"));
+                if (pIdx < 0) pIdx = getCompFromID(COMP_PROPULSION, WzString::fromUtf8("wheeled01"));
+                if (wIdx < 0) wIdx = getCompFromID(COMP_WEAPON, WzString::fromUtf8("MG1Mk1"));
+                if (bIdx >= 0 && pIdx >= 0)
+                {
+                    auto tmpl = std::make_unique<DROID_TEMPLATE>();
+                    tmpl->name = WzString::fromUtf8(sd.name);
+                    tmpl->id = WzString::fromUtf8(sd.name);
+                    for (int c = 0; c < DROID_MAXCOMP; ++c) tmpl->asParts[c] = 0;
+                    tmpl->asParts[COMP_BODY] = bIdx;
+                    tmpl->asParts[COMP_PROPULSION] = pIdx;
+                    if (wIdx >= 0) { tmpl->numWeaps = 1; *(tmpl->asWeaps) = wIdx; }
+                    tmpl->droidType = droidTemplateType(tmpl.get());
+                    found = addTemplate(1, std::move(tmpl));
+                }
+            }
+            if (found != nullptr) scavTemplates.push_back(found);
+        }
+    }
+
     int fIdx = 0;
-    std::vector<int> owners = { 1 };
-    int scavP = static_cast<int>(scavengerPlayer());
-    if (scavP >= 0 && scavP < static_cast<int>(apsStructLists.size()) && scavP != 1) owners.push_back(scavP);
-    for (int ownerP : owners)
-    for (STRUCTURE* psStruct : apsStructLists.at(ownerP))
+    for (STRUCTURE* psStruct : apsStructLists.at(1))
     {
         if (!psStruct || psStruct->died || psStruct->status != SS_BUILT) continue;
         if (!psStruct->isFactory() && psStruct->pStructureType->id.toUtf8() != "A0BaBaFactory") continue;
@@ -301,39 +331,18 @@ void usaProduceOpforUnits(bool isScav)
                 structSetManufacture(psStruct, combat.at((fIdx + waveRound) % combat.size()), ModeImmediate);
             }
         }
-        else
+        else if (!scavTemplates.empty())
         {
-            if (apsDroidLists.at(1).size() >= 250) break;
-            const ScavSpec& sp = specs[(fIdx + waveRound) % 5];
-            int bIdx = getCompFromID(COMP_BODY, sp.body);
-            int pIdx = getCompFromID(COMP_PROPULSION, sp.prop);
-            int wIdx = getCompFromID(COMP_WEAPON, sp.weap);
-            if (bIdx < 0) bIdx = getCompFromID(COMP_BODY, "Body1REC");
-            if (pIdx < 0) pIdx = getCompFromID(COMP_PROPULSION, "wheeled01");
-            if (wIdx < 0) wIdx = getCompFromID(COMP_WEAPON, "MG1Mk1");
-            if (bIdx >= 0 && pIdx >= 0 && wIdx >= 0)
-            {
-                DROID_TEMPLATE tmpl = {};
-                tmpl.name = WzString::fromUtf8(sp.name);
-                tmpl.id = WzString::fromUtf8(sp.name);
-                tmpl.asParts[COMP_BODY] = bIdx;
-                tmpl.asParts[COMP_PROPULSION] = pIdx;
-                tmpl.numWeaps = 1;
-                tmpl.asWeaps[0] = wIdx;
-                tmpl.droidType = droidTemplateType(&tmpl);
-                int spawnX = std::max(world_coord(4), std::min(world_coord(mapWidth - 5), psStruct->pos.x + world_coord((fIdx % 3) - 1)));
-                int spawnY = std::max(world_coord(4), std::min(world_coord(mapHeight - 5), psStruct->pos.y + world_coord(4)));
-                auto psNew = reallyBuildDroid(&tmpl, Position(spawnX, spawnY, 0), 1, false);
-                if (psNew != nullptr)
-                {
-                    droidSetBits(&tmpl, psNew);
-                }
-            }
+            size_t waveCap = std::min<size_t>(110, 35 + static_cast<size_t>(scavWaveNumber) * 15); if (apsDroidLists.at(1).size() >= waveCap) break;
+            DROID_TEMPLATE* psChosen = scavTemplates[(fIdx + waveRound) % scavTemplates.size()];
+            int spawnX = std::max(world_coord(4), std::min(world_coord(mapWidth - 5), psStruct->pos.x + world_coord((fIdx % 3) - 1)));
+            int spawnY = std::max(world_coord(4), std::min(world_coord(mapHeight - 5), psStruct->pos.y + world_coord(4)));
+            DROID* psNew = reallyBuildDroid(psChosen, Position(spawnX, spawnY, 0), 1, false);
+            if (psNew != nullptr) { addDroid(psNew, apsDroidLists); }
         }
         fIdx++;
     }
 }
-
 void dispatchOpforOrders(bool stageAtRally)
 {
     std::vector<BASE_OBJECT*> p0Targets;
@@ -358,7 +367,7 @@ void dispatchOpforOrders(bool stageAtRally)
         double dy = static_cast<double>(mapMidY - baseY);
         double len = std::hypot(dx, dy);
         if (len < 1.0) { dx = 1.0; dy = 0.0; len = 1.0; }
-        int dist = world_coord(26);
+        int dist = world_coord(18);
         int rallyX = std::max(world_coord(5), std::min(world_coord(mapWidth - 6), baseX + static_cast<int>((dx / len) * dist)));
         int rallyY = std::max(world_coord(5), std::min(world_coord(mapHeight - 6), baseY + static_cast<int>((dy / len) * dist)));
 
@@ -575,7 +584,7 @@ void updateUsaInGameHud()
             }
             if (rem % 6 == 0)
             {
-                bool scavMode = (loadBriefingJson().factionName.find("Scav") != std::string::npos);
+                bool scavMode = ((getUsaCampaignState().activeTargetIndex >= 0 && getUsaCampaignState().states[getUsaCampaignState().activeTargetIndex].owner == UsaFaction::SCAV_SYNDICATE) || loadBriefingJson().factionName.find("Scav") != std::string::npos);
                 addPower(1, 2500);
                 usaProduceOpforUnits(scavMode);
             }
