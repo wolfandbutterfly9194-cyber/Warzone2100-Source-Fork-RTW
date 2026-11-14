@@ -1,0 +1,53 @@
+v1.2.0
+- Added support for the new Campaign Mod Packaging.
+- Fixed the Resistance telling the player to deal with the Hellraisers, even if the Hellraisers are already dead/allied.
+- Fixed the Royalist "Spy LZ" not properly calling transports.
+
+v1.1.0
+Update with a lot of script tidying-up to match the current libcampaign standards introduced in 4.4.0, this should not have a noticeable impact on actual gameplay.
+NOTE: Saves from previous versions will probably not work, as some variable names have been changed.
+Also includes some other changes:
+- Prevented AI trucks from potentially forgetting to build modules.
+- Prevented AI Bunker Buster VTOLs from being assigned to VTOL towers.
+- Added new color options for the "color me" chat command ("bright blue", "neon green", "ultraviolet", "infrared", and "brown").
+- Added more oil drums in the starting area.
+- Widened the main Hellraiser chokepoint.
+- Widened the pathway near the south-east Coalition base.
+
+v1.0.6
+- Prevented truck "wandering" behavior from potentially freezing the game via an infinite loop.
+
+v1.0.5
+- Replaced the objectively terrible Hyper Velocity Cannon and Tank Killer Emplacements with cooler bunker versions.
+- Un-banished the Lancer Bunker from the void.
+- Widened a bunch of chokepoints and high-traffic areas.
+- Assault Cannon and Hyper Velocity Cannon weights have been swapped.
+- Royalists now prefer the Hyper Velocity Cannon for hover units.
+- Royalists now prefer the Assault Cannon for tracked units.
+- Added an extra pathway to the Royalist main base.
+- The Resistance now properly cover up any evidence of having Sarissas when allied.
+- Tweaked the Command Turret's visual effects.
+- Added a warning transmission about crossing the Hellraiser bridge too early.
+- Fixed some typos in various transmissions.
+- Made the Super Auto-Cannon Cyborg's weapon actually look like the Assault Cannon, instead of the Hyper Velocity Cannon.
+- Made cyborg weapons in the research menu display the actual cyborg weapon.
+- Allying with a faction will grant (a brief) vision of all their units and structures.
+
+v1.0.4
+- Fixed some Royalist VTOL CB towers being incorrectly rebuilt as VTOL Strike towers when destroyed.
+- Fixed transports flying back and forth forever when an LZ is destroyed while a transport is en route.
+- Coalition transport reinforcements stop after the Royalists' outer base is destroyed, to reduce traffic in the final area.
+- Coalition transport reinforcements no longer bring mobile repair units when allied.
+
+v1.0.3
+- Fixed errors in camDisableTruck() and camEnableTruck().
+- Properly remove a duplicate artifact for Composite Alloys Mk3 if the Hellraisers are allied.
+- Increased the minimum brightness for the day/night cycle (this will make objects easier to see at night).
+
+v1.0.2
+- Fixed errors involving undefined droid id's and propulsions due to structures being added to unit groups stemming from camUpgradeOnMapStructures().
+- Various script tidying and cleanups (missing semicolons, etc.).
+
+v1.0.1
+- Widened the tighter areas of the canyon in the central mountain areas.
+- Also added a new route connecting the trench with the east coast area.

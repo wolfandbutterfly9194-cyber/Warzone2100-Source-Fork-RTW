@@ -1,0 +1,9 @@
+tertilesc1hw,8
+a_yellow,page-82-yellow-sand-arizona.png,7.0
+a_red,page-83-red-earth-arizona.png,9.0
+a_concrete,page-84-tiles-arizona.png,4.0
+a_cliff,page-85-cliffs-arizona.png,4.6
+a_water,page-86-bottom-arizona.png,3.2
+a_mud,page-87-mud-arizona.png,9.0
+a_green,page-88-grass-arizona.png,9.0
+a_sand,page-109-sand-arizona.png,5.0

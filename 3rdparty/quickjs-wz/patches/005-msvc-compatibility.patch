@@ -1,0 +1,321 @@
+diff --git a/quickjs/cutils.c b/quickjs/cutils.c
+--- a/quickjs/cutils.c
++++ b/quickjs/cutils.c
+@@ -29,6 +29,10 @@
+ 
+ #include "cutils.h"
+ 
++#if defined(_MSC_VER)
++#include "win32-gettimeofday.c"
++#endif
++
+ void pstrcpy(char *buf, int buf_size, const char *str)
+ {
+     int c;
+diff --git a/quickjs/cutils.h b/quickjs/cutils.h
+--- a/quickjs/cutils.h
++++ b/quickjs/cutils.h
+@@ -29,17 +29,45 @@
+ #include <string.h>
+ #include <inttypes.h>
+ 
++#if defined(_MSC_VER)
++  #if !defined(NOMINMAX)
++    #define NOMINMAX // For windows.h
++  #endif
++  #include <windows.h>
++  #include <intrin.h>
++  #include <winsock2.h> // For timeval struct, etc
++#endif
++
++#if defined(_MSC_VER) && !defined(__clang__)
++#  define likely(x)       (x)
++#  define unlikely(x)     (x)
++#  define force_inline __forceinline
++#  define no_inline __declspec(noinline)
++#  define __maybe_unused
++#  define __attribute__(x)
++#  define __attribute(x)
++#else
+ #define likely(x)       __builtin_expect(!!(x), 1)
+ #define unlikely(x)     __builtin_expect(!!(x), 0)
+ #define force_inline inline __attribute__((always_inline))
+ #define no_inline __attribute__((noinline))
+ #define __maybe_unused __attribute__((unused))
++#endif
+ 
+ #define xglue(x, y) x ## y
+ #define glue(x, y) xglue(x, y)
+ #define stringify(s)    tostring(s)
+ #define tostring(s)     #s
+ 
++#if defined(_MSC_VER) && !defined(__clang__)
++#include <math.h>
++#define INF INFINITY
++#define NEG_INF -INFINITY
++#else
++#define INF (1.0/0.0)
++#define NEG_INF (-1.0/0.0)
++#endif
++
+ #ifndef offsetof
+ #define offsetof(type, field) ((size_t) &((type *)0)->field)
+ #endif
+@@ -66,6 +94,10 @@ enum {
+ };
+ #endif
+ 
++#if defined(_MSC_VER)
++int gettimeofday(struct timeval * tp, struct timezone * tzp);
++#endif
++
+ void pstrcpy(char *buf, int buf_size, const char *str);
+ char *pstrcat(char *buf, int buf_size, const char *s);
+ int strstart(const char *str, const char *val, const char **ptr);
+@@ -128,82 +160,113 @@ static inline int64_t min_int64(int64_t a, int64_t b)
+ /* WARNING: undefined if a = 0 */
+ static inline int clz32(unsigned int a)
+ {
++#if defined(_MSC_VER) && !defined(__clang__)
++    unsigned long index;
++    _BitScanReverse(&index, a);
++    return 31 - index;
++#else
+     return __builtin_clz(a);
++#endif
+ }
+ 
+ /* WARNING: undefined if a = 0 */
+ static inline int clz64(uint64_t a)
+ {
++#if defined(_MSC_VER) && !defined(__clang__)
++#if INTPTR_MAX == INT64_MAX
++    unsigned long index;
++    _BitScanReverse64(&index, a);
++    return 63 - index;
++#else
++    if (a >> 32)
++        return clz32((unsigned)(a >> 32));
++    else
++        return clz32((unsigned)a) + 32;
++#endif
++#else
+     return __builtin_clzll(a);
++#endif
+ }
+ 
+ /* WARNING: undefined if a = 0 */
+ static inline int ctz32(unsigned int a)
+ {
++#if defined(_MSC_VER) && !defined(__clang__)
++    unsigned long index;
++    _BitScanForward(&index, a);
++    return index;
++#else
+     return __builtin_ctz(a);
++#endif
+ }
+ 
+ /* WARNING: undefined if a = 0 */
+ static inline int ctz64(uint64_t a)
+ {
++#if defined(_MSC_VER) && !defined(__clang__)
++    unsigned long index;
++    _BitScanForward64(&index, a);
++    return index;
++#else
+     return __builtin_ctzll(a);
++#endif
+ }
+ 
+-struct __attribute__((packed)) packed_u64 {
+-    uint64_t v;
+-};
+-
+-struct __attribute__((packed)) packed_u32 {
+-    uint32_t v;
+-};
+-
+-struct __attribute__((packed)) packed_u16 {
+-    uint16_t v;
+-};
+-
+ static inline uint64_t get_u64(const uint8_t *tab)
+ {
+-    return ((const struct packed_u64 *)tab)->v;
++    uint64_t v;
++    memcpy(&v, tab, sizeof(v));
++    return v;
+ }
+ 
+ static inline int64_t get_i64(const uint8_t *tab)
+ {
+-    return (int64_t)((const struct packed_u64 *)tab)->v;
++    int64_t v;
++    memcpy(&v, tab, sizeof(v));
++    return v;
+ }
+ 
+ static inline void put_u64(uint8_t *tab, uint64_t val)
+ {
+-    ((struct packed_u64 *)tab)->v = val;
++    memcpy(tab, &val, sizeof(val));
+ }
+ 
+ static inline uint32_t get_u32(const uint8_t *tab)
+ {
+-    return ((const struct packed_u32 *)tab)->v;
++    uint32_t v;
++    memcpy(&v, tab, sizeof(v));
++    return v;
+ }
+ 
+ static inline int32_t get_i32(const uint8_t *tab)
+ {
+-    return (int32_t)((const struct packed_u32 *)tab)->v;
++    int32_t v;
++    memcpy(&v, tab, sizeof(v));
++    return v;
+ }
+ 
+ static inline void put_u32(uint8_t *tab, uint32_t val)
+ {
+-    ((struct packed_u32 *)tab)->v = val;
++    memcpy(tab, &val, sizeof(val));
+ }
+ 
+ static inline uint32_t get_u16(const uint8_t *tab)
+ {
+-    return ((const struct packed_u16 *)tab)->v;
++    uint16_t v;
++    memcpy(&v, tab, sizeof(v));
++    return v;
+ }
+ 
+ static inline int32_t get_i16(const uint8_t *tab)
+ {
+-    return (int16_t)((const struct packed_u16 *)tab)->v;
++    int16_t v;
++    memcpy(&v, tab, sizeof(v));
++    return v;
+ }
+ 
+ static inline void put_u16(uint8_t *tab, uint16_t val)
+ {
+-    ((struct packed_u16 *)tab)->v = val;
++    memcpy(tab, &val, sizeof(val));
+ }
+ 
+ static inline uint32_t get_u8(const uint8_t *tab)
+diff --git a/quickjs/quickjs.c b/quickjs/quickjs.c
+--- a/quickjs/quickjs.c
++++ b/quickjs/quickjs.c
+@@ -28,7 +28,14 @@
+ #include <inttypes.h>
+ #include <string.h>
+ #include <assert.h>
++#if !defined(QUICKJS_HAVE_SYS_TIME_H)
++  #if defined(__linux__) || defined(__APPLE__)
++    #define QUICKJS_HAVE_SYS_TIME_H
++  #endif
++#endif
++#if defined(QUICKJS_HAVE_SYS_TIME_H)
+ #include <sys/time.h>
++#endif
+ #include <time.h>
+ #include <fenv.h>
+ #include <math.h>
+@@ -38,6 +45,8 @@
+ #include <malloc.h>
+ #elif defined(__FreeBSD__)
+ #include <malloc_np.h>
++#elif defined(_WIN32)
++#include <malloc.h>
+ #endif
+ 
+ #include "cutils.h"
+@@ -49,7 +58,7 @@
+ 
+ #define OPTIMIZE         1
+ #define SHORT_OPCODES    1
+-#if defined(EMSCRIPTEN)
++#if defined(EMSCRIPTEN) || defined(_MSC_VER)
+ #define DIRECT_DISPATCH  0
+ #else
+ #define DIRECT_DISPATCH  1
+@@ -1630,17 +1639,39 @@ static inline BOOL js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
+     return FALSE;
+ }
+ #else
++
++#if !defined(__has_builtin)
++  #define __has_builtin(x) 0
++#endif
++
++#if defined(__GNUC__) || defined(__clang__) || __has_builtin(__builtin_frame_address)
+ /* Note: OS and CPU dependent */
+ static inline uintptr_t js_get_stack_pointer(void)
+ {
+     return (uintptr_t)__builtin_frame_address(0);
+ }
++#elif defined(_MSC_VER) && !defined(__clang__)
++static inline uintptr_t js_get_stack_pointer(void)
++{
++    return (uintptr_t)_AddressOfReturnAddress();
++}
++#else
++static inline uintptr_t js_get_stack_pointer(void)
++{
++    return 0;
++}
++#define NO_VALID_STACK_POINTER
++#endif
+ 
+ static inline BOOL js_check_stack_overflow(JSRuntime *rt, size_t alloca_size)
+ {
++#if defined(NO_VALID_STACK_POINTER)
++    return FALSE;
++#else
+     uintptr_t sp;
+     sp = js_get_stack_pointer() - alloca_size;
+     return unlikely(sp < rt->stack_limit);
++#endif
+ }
+ #endif
+ 
+@@ -12421,7 +12452,7 @@ static JSValue js_atof(JSContext *ctx, const char *str, const char **pp,
+         if (!(flags & ATOD_INT_ONLY) &&
+             (atod_type == ATOD_TYPE_FLOAT64) &&
+             strstart(p, "Infinity", &p)) {
+-            double d = 1.0 / 0.0;
++            double d = INF;
+             if (is_neg)
+                 d = -d;
+             val = JS_NewFloat64(ctx, d);
+@@ -22831,7 +22862,7 @@ static int json_parse_number(JSParseState *s, const uint8_t **pp)
+     if (!is_digit(*p)) {
+         if (s->ext_json) {
+             if (strstart((const char *)p, "Infinity", (const char **)&p)) {
+-                d = 1.0 / 0.0;
++                d = INF;
+                 if (*p_start == '-')
+                     d = -d;
+                 goto done;
+@@ -46266,7 +46297,7 @@ static JSValue js_math_min_max(JSContext *ctx, JSValueConst this_val,
+     uint32_t tag;
+ 
+     if (unlikely(argc == 0)) {
+-        return __JS_NewFloat64(ctx, is_max ? -1.0 / 0.0 : 1.0 / 0.0);
++        return __JS_NewFloat64(ctx, is_max ? NEG_INF : INF);
+     }
+ 
+     tag = JS_VALUE_GET_TAG(argv[0]);
+@@ -54339,7 +54370,7 @@ static const JSCFunctionListEntry js_global_funcs[] = {
+     JS_CFUNC_MAGIC_DEF("encodeURIComponent", 1, js_global_encodeURI, 1 ),
+     JS_CFUNC_DEF("escape", 1, js_global_escape ),
+     JS_CFUNC_DEF("unescape", 1, js_global_unescape ),
+-    JS_PROP_DOUBLE_DEF("Infinity", 1.0 / 0.0, 0 ),
++    JS_PROP_DOUBLE_DEF("Infinity", INF, 0 ),
+     JS_PROP_DOUBLE_DEF("NaN", NAN, 0 ),
+     JS_PROP_UNDEFINED_DEF("undefined", 0 ),
+     JS_PROP_STRING_DEF("[Symbol.toStringTag]", "global", JS_PROP_CONFIGURABLE ),

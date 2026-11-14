@@ -1,0 +1,23 @@
+/*
+ * GameDesc.lev
+ *
+ * Level data descriptions
+ */
+
+
+/******************************************************/
+/*     Fractured Kingdom dataset and levels           */
+
+campaign	CAM_1
+data		"wrf/vidmem.wrf"
+data		"wrf/basic.wrf"
+data		"wrf/cam1.wrf"
+data		"wrf/audio.wrf"
+data		"wrf/stats.wrf"
+data		"wrf/camres.wrf"
+
+/* Fractured Kingdom override */
+camstart    Kingdom
+dataset     CAM_1
+game        "wrf/cam1/Kingdom.gam"
+data        "wrf/cam1/Kingdom.wrf"
