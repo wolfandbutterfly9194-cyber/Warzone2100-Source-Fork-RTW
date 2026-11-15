@@ -98,6 +98,9 @@ struct UsaGeneralState
 
 struct UsaCampaignState
 {
+    std::string playerFactionName = "The Project";
+    int playerColorIndex = 0;
+    bool campaignConfigured = false;
     int turn = 1;
     int power = 1200;
     int selectedIndex = 2; // CA

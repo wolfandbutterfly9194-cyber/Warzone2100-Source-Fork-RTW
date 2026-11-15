@@ -161,7 +161,12 @@ UsaColor getUsaFactionColor(UsaFaction f, bool isSelected)
     int lift = isSelected ? 22 : 0;
     switch (f)
     {
-    case UsaFaction::THE_PROJECT:      return { static_cast<uint8_t>(44 + lift),  static_cast<uint8_t>(84 + lift),  static_cast<uint8_t>(128 + lift), 255 }; // Player Steel-Blue
+    case UsaFaction::THE_PROJECT:
+    {
+        int idx = std::max(0, std::min(7, getUsaCampaignState().playerColorIndex));
+        static const uint8_t pCols[8][3] = { {44,84,136}, {32,108,96}, {136,46,52}, {92,56,128}, {148,122,42}, {102,112,126}, {52,58,124}, {36,96,118} };
+        return { static_cast<uint8_t>(std::min(255, pCols[idx][0] + lift)), static_cast<uint8_t>(std::min(255, pCols[idx][1] + lift)), static_cast<uint8_t>(std::min(255, pCols[idx][2] + lift)), 255 };
+    }
     case UsaFaction::NEW_PARADIGM:     return { static_cast<uint8_t>(148 + lift), static_cast<uint8_t>(94 + lift),  static_cast<uint8_t>(38 + lift),  255 }; // Neo Paradigm Amber
     case UsaFaction::SCAV_PACIFIC:     return { static_cast<uint8_t>(48 + lift),  static_cast<uint8_t>(88 + lift),  static_cast<uint8_t>(74 + lift),  255 }; // Pacific Pine-Teal
     case UsaFaction::SCAV_ROCKIES:     return { static_cast<uint8_t>(88 + lift),  static_cast<uint8_t>(76 + lift),  static_cast<uint8_t>(62 + lift),  255 }; // Rockies Granite
@@ -183,7 +188,7 @@ std::string getUsaFactionName(UsaFaction f)
 {
     switch (f)
     {
-    case UsaFaction::THE_PROJECT:      return "The Project";
+    case UsaFaction::THE_PROJECT:      return getUsaCampaignState().playerFactionName.empty() ? "The Project" : getUsaCampaignState().playerFactionName;
     case UsaFaction::NEW_PARADIGM:     return "Neo Paradigm";
     case UsaFaction::SCAV_PACIFIC:     return "Pacific Scavs";
     case UsaFaction::SCAV_ROCKIES:     return "Rockies Scavs";
@@ -218,7 +223,7 @@ bool usaPointInPolygon(const UsaVec2& p, const std::vector<UsaVec2>& poly)
 
 void UsaCampaignState::initDefault()
 {
-    turn = 1; power = 1200; selectedIndex = 2; activeTargetIndex = -1;
+    playerFactionName = "The Project"; playerColorIndex = 0; campaignConfigured = false; turn = 1; power = 1200; selectedIndex = 2; activeTargetIndex = -1;
     activeSessionIsBaseMode = false; activeSessionIsDefense = false;
     states = buildContinentalUSA();
     techs = {
@@ -237,6 +242,8 @@ bool UsaCampaignState::saveToPhysfs() const
 {
     PHYSFS_mkdir("usa_campaign");
     std::ostringstream out;
+    std::string safeFName = playerFactionName; for (char& c : safeFName) if (c == ' ') c = '_';
+    out << "PLAYER_FACTION " << safeFName << " " << playerColorIndex << "\n";
     out << "TURN " << turn << "\nPOWER " << power << "\n";
     for (const auto& s : states)
     {
@@ -280,7 +287,8 @@ bool UsaCampaignState::loadFromPhysfs()
     std::string tag;
     while (in >> tag)
     {
-        if (tag == "TURN") in >> turn;
+        if (tag == "PLAYER_FACTION") { std::string fn; int ci = 0; in >> fn >> ci; for (char& c : fn) if (c == '_') c = ' '; playerFactionName = fn; playerColorIndex = std::max(0, std::min(7, ci)); campaignConfigured = true; }
+        else if (tag == "TURN") { in >> turn; campaignConfigured = true; }
         else if (tag == "POWER") in >> power;
         else if (tag == "GENERAL_ACTIVE")
         {

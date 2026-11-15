@@ -145,6 +145,25 @@ void usaInitOverworldUi()
 bool runUsaOverworldUi()
 {
     UsaCampaignState& camp = getUsaCampaignState();
+    if (!camp.campaignConfigured)
+    {
+        const int sw = std::max(1024, static_cast<int>(screenWidth)), sh = std::max(700, static_cast<int>(screenHeight));
+        const float sx = static_cast<float>(sw) / 1360.0f, sy = static_cast<float>(sh) / 780.0f;
+        const int mx = mouseX(), my = mouseY();
+        if (keyPressed(KEY_BACKSPACE) && !camp.playerFactionName.empty()) camp.playerFactionName.pop_back();
+        for (int k = KEY_A; k <= KEY_Z; ++k) { if (keyPressed(static_cast<KEY_CODE>(k)) && camp.playerFactionName.size() < 22) { bool shf = keyDown(KEY_LSHIFT) || keyDown(KEY_RSHIFT) || camp.playerFactionName.empty() || camp.playerFactionName.back() == ' '; char ch = static_cast<char>((shf ? 'A' : 'a') + (k - KEY_A)); camp.playerFactionName.push_back(ch); } }
+        if (keyPressed(KEY_SPACE) && !camp.playerFactionName.empty() && camp.playerFactionName.back() != ' ' && camp.playerFactionName.size() < 22) camp.playerFactionName.push_back(' ');
+        if (mousePressed(MOUSE_LMB))
+        {
+            const char* presets[5] = { "The Project", "Iron Vanguard", "Pacific Union", "Liberty Command", "Solar Coalition" };
+            for (int p = 0; p < 5; ++p) { int px = static_cast<int>((310 + p * 150) * sx), py = static_cast<int>(296 * sy); if (hitRect(mx, my, px, py, static_cast<int>(142 * sx), static_cast<int>(30 * sy))) { camp.playerFactionName = presets[p]; return true; } }
+            for (int c = 0; c < 8; ++c) { int cx = static_cast<int>((310 + (c % 4) * 188) * sx), cy = static_cast<int>((395 + (c / 4) * 52) * sy); if (hitRect(mx, my, cx, cy, static_cast<int>(178 * sx), static_cast<int>(42 * sy))) { camp.playerColorIndex = c; return true; } }
+            if (hitRect(mx, my, static_cast<int>(460 * sx), static_cast<int>(585 * sy), static_cast<int>(440 * sx), static_cast<int>(48 * sy))) { if (camp.playerFactionName.empty()) camp.playerFactionName = "The Project"; camp.campaignConfigured = true; camp.saveToPhysfs(); return true; }
+        }
+        return true;
+    }
+{
+    UsaCampaignState& camp = getUsaCampaignState();
     const int sw = std::max(1024, static_cast<int>(screenWidth));
     const int sh = std::max(700, static_cast<int>(screenHeight));
     const float sx = static_cast<float>(sw) / 1360.0f;
@@ -420,6 +439,39 @@ namespace
     void drawStateInitialBadge(const std::string& code, int cx, int cy, bool isSel, bool isHov) { int bx = cx - 12, by = cy - 7; pie_UniTransBoxFill(bx, by, bx + 24, by + 15, isSel ? pal_RGBA(36, 38, 32, 245) : (isHov ? pal_RGBA(22, 38, 58, 232) : pal_RGBA(10, 16, 25, 215))); iV_Box(bx, by, bx + 24, by + 15, isSel ? pal_RGBA(198, 182, 128, 255) : (isHov ? pal_RGBA(120, 175, 225, 235) : pal_RGBA(58, 78, 104, 200))); iV_DrawText(code.c_str(), static_cast<float>(bx + 4), static_cast<float>(by + 11), font_regular); }
 }
 void renderUsaOverworldUi()
+{
+    UsaCampaignState& camp = getUsaCampaignState();
+    if (!camp.campaignConfigured)
+    {
+        const int sw = std::max(1024, static_cast<int>(screenWidth)), sh = std::max(700, static_cast<int>(screenHeight));
+        const float sx = static_cast<float>(sw) / 1360.0f, sy = static_cast<float>(sh) / 780.0f;
+        const int mx = mouseX(), my = mouseY();
+        pie_BoxFill(0, 0, sw, sh, pal_RGBA(8, 13, 21, 255));
+        for (int gx = 0; gx < sw; gx += 48) iV_Line(gx, 0, gx, sh, pal_RGBA(16, 26, 40, 140));
+        for (int gy = 0; gy < sh; gy += 48) iV_Line(0, gy, sw, gy, pal_RGBA(16, 26, 40, 140));
+        drawWzPlate(static_cast<int>(270 * sx), static_cast<int>(110 * sy), static_cast<int>(820 * sx), static_cast<int>(555 * sy), pal_RGBA(15, 22, 33, 248), pal_RGBA(98, 124, 158, 255), true);
+        drawWzPng("image_intel_campaign.png", static_cast<int>(296 * sx), static_cast<int>(132 * sy), 30, 30);
+        iV_DrawText("STRATEGIC COMMAND // FACTION INITIALIZATION (STARTING SECTOR: CALIFORNIA)", 338.0f * sx, 153.0f * sy, font_regular);
+        iV_DrawText("1. ENTER COMMAND FACTION NAME (TYPE ON KEYBOARD OR SELECT PRESET):", 310.0f * sx, 212.0f * sy, font_regular);
+        drawWzPlate(static_cast<int>(310 * sx), static_cast<int>(226 * sy), static_cast<int>(740 * sx), static_cast<int>(44 * sy), pal_RGBA(10, 16, 25, 255), pal_RGBA(120, 165, 215, 255), false);
+        std::string typedStr = camp.playerFactionName + "_";
+        iV_DrawText(typedStr.c_str(), 328.0f * sx, 254.0f * sy, font_regular);
+        const char* presets[5] = { "The Project", "Iron Vanguard", "Pacific Union", "Liberty Command", "Solar Coalition" };
+        for (int p = 0; p < 5; ++p) { int px = static_cast<int>((310 + p * 150) * sx), py = static_cast<int>(296 * sy); bool act = (camp.playerFactionName == presets[p]); drawWzButton(px, py, static_cast<int>(142 * sx), static_cast<int>(30 * sy), presets[p], pal_RGBA(21,31,46,246), pal_RGBA(88,112,144,220), act || hitRect(mx, my, px, py, static_cast<int>(142 * sx), static_cast<int>(30 * sy))); }
+        iV_DrawText("2. SELECT EXCLUSIVE FACTION COLOR (RESERVED ? AI OPPONENTS CANNOT USE THESE):", 310.0f * sx, 376.0f * sy, font_regular);
+        const char* colNames[8] = { "Cobalt Blue", "Emerald Cyan", "Crimson Red", "Royal Violet", "Arctic Gold", "Titanium Silver", "Deep Indigo", "Teal Horizon" };
+        const uint8_t pCols[8][3] = { {44,84,136}, {32,108,96}, {136,46,52}, {92,56,128}, {148,122,42}, {102,112,126}, {52,58,124}, {36,96,118} };
+        for (int c = 0; c < 8; ++c) { int cx = static_cast<int>((310 + (c % 4) * 188) * sx), cy = static_cast<int>((395 + (c / 4) * 52) * sy), cw = static_cast<int>(178 * sx), ch = static_cast<int>(42 * sy); bool selC = (camp.playerColorIndex == c); drawWzButton(cx, cy, cw, ch, colNames[c], pal_RGBA(21,31,46,246), pal_RGBA(88,112,144,220), selC || hitRect(mx, my, cx, cy, cw, ch)); pie_BoxFill(cx + cw - 26, cy + 11, cx + cw - 8, cy + 31, pal_RGBA(pCols[c][0], pCols[c][1], pCols[c][2], 255)); iV_Box(cx + cw - 26, cy + 11, cx + cw - 8, cy + 31, pal_RGBA(215, 230, 248, 255)); }
+        UsaColor prev = getUsaFactionColor(UsaFaction::THE_PROJECT, false);
+        drawWzPlate(static_cast<int>(310 * sx), static_cast<int>(512 * sy), static_cast<int>(740 * sx), static_cast<int>(50 * sy), pal_RGBA(12, 18, 28, 245), pal_RGBA(70, 100, 138, 240), false);
+        pie_BoxFill(static_cast<int>(326 * sx), static_cast<int>(525 * sy), static_cast<int>(354 * sx), static_cast<int>(549 * sy), pal_RGBA(prev.r, prev.g, prev.b, 255));
+        iV_Box(static_cast<int>(326 * sx), static_cast<int>(525 * sy), static_cast<int>(354 * sx), static_cast<int>(549 * sy), pal_RGBA(225, 240, 255, 255));
+        std::string prevTxt = "MAP PREVIEW:  " + (camp.playerFactionName.empty() ? std::string("The Project") : camp.playerFactionName) + "   |   HQ: CALIFORNIA [CA]   |   VS. NEO PARADIGM [TX] & 12 SCAV WARLORD CLUSTERS";
+        iV_DrawText(prevTxt.c_str(), 368.0f * sx, 542.0f * sy, font_regular);
+        int lBtnX = static_cast<int>(460 * sx), lBtnY = static_cast<int>(585 * sy), lBtnW = static_cast<int>(440 * sx), lBtnH = static_cast<int>(48 * sy);
+        drawWzButton(lBtnX, lBtnY, lBtnW, lBtnH, "LAUNCH RECLAMATION CAMPAIGN", pal_RGBA(24, 52, 86, 255), pal_RGBA(140, 185, 235, 255), hitRect(mx, my, lBtnX, lBtnY, lBtnW, lBtnH));
+        return;
+    }
 {
     UsaCampaignState& camp = getUsaCampaignState();
     const int sw = std::max(1024, static_cast<int>(screenWidth));
