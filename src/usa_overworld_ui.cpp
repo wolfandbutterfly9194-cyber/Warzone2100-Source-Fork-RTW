@@ -410,130 +410,14 @@ namespace
         }
     }
 
-    void drawWzPng(const char* imgName, int x, int y, int w, int h)
-    {
-        static bool atlasLoaded = false;
-        if (!atlasLoaded)
-        {
-            atlasLoaded = true;
-            PHYSFS_mount("C:/Games/warzone2100_source/data/base", nullptr, 1);
-            PHYSFS_mount("../../data/base", nullptr, 1);
-            PHYSFS_mount("../data/base", nullptr, 1);
-            PHYSFS_mount("data/base", nullptr, 1);
-            if (IntImages == nullptr)
-            {
-                IntImages = iV_LoadImageFile("images/intfac.img");
-            }
-        }
-        if (iV_GetImage(WzString::fromUtf8(imgName)) != nullptr)
-        {
-            iV_DrawImage2(WzString::fromUtf8(imgName), static_cast<float>(x), static_cast<float>(y), static_cast<float>(w), static_cast<float>(h));
-        }
-    }
-
-    void drawWzPlate(int x, int y, int w, int h, PIELIGHT fill, PIELIGHT border, bool ticks = true)
-    {
-        (void)fill;
-        (void)border;
-        (void)ticks;
-        // Authentic Warzone 2100 Frontend / Options muted slate-blue window style
-        pie_UniTransBoxFill(x, y, x + w, y + h, pal_RGBA(16, 23, 34, 245));
-        iV_Line(x, y, x + w, y, pal_RGBA(88, 110, 140, 225));
-        iV_Line(x, y, x, y + h, pal_RGBA(78, 98, 126, 215));
-        iV_Line(x, y + h, x + w, y + h, pal_RGBA(8, 11, 16, 255));
-        iV_Line(x + w, y, x + w, y + h, pal_RGBA(8, 11, 16, 255));
-        iV_Box(x + 1, y + 1, x + w - 1, y + h - 1, pal_RGBA(52, 68, 92, 255));
-    }
-
-    void drawWzButton(int x, int y, int w, int h, const std::string& label, PIELIGHT fill, PIELIGHT accent, bool hovered = false)
-    {
-        (void)fill;
-        (void)accent;
-        // Authentic Warzone 2100 Frontend Menu Button (muted steel-blue, zero neon glare)
-        PIELIGHT bg = hovered ? pal_RGBA(34, 50, 74, 250) : pal_RGBA(22, 32, 48, 245);
-        PIELIGHT edge = hovered ? pal_RGBA(125, 155, 195, 255) : pal_RGBA(60, 78, 104, 255);
-        pie_UniTransBoxFill(x, y, x + w, y + h, bg);
-        iV_Line(x, y, x + w, y, hovered ? pal_RGBA(145, 175, 215, 255) : pal_RGBA(86, 108, 138, 215));
-        iV_Line(x, y, x, y + h, hovered ? pal_RGBA(130, 160, 200, 240) : pal_RGBA(76, 96, 124, 205));
-        iV_Line(x, y + h, x + w, y + h, pal_RGBA(8, 11, 16, 255));
-        iV_Line(x + w, y, x + w, y + h, pal_RGBA(8, 11, 16, 255));
-        iV_Box(x + 1, y + 1, x + w - 1, y + h - 1, edge);
-        drawWzPng(hovered ? "image_indicator_dot_expand.png" : "image_indicator_dot.png", x + 10, y + (h / 2) - 7, 14, 14);
-        iV_DrawText(label.c_str(), static_cast<float>(x + 32), static_cast<float>(y + (h / 2) + 4), font_regular);
-    }
-    void drawUsaTerrainUnderMap(float sx, float sy)
-    {
-        // Continental terrain relief layers (Coastal Plains, Great Plains, Rockies, Cascades, Appalachians)
-        // 1. Continental base landmass shelf
-        fillUsaPolygon({ {95,105},{872,115},{855,175},{796,290},{750,540},{715,545},{685,475},{595,480},{465,530},{355,425},{180,415},{100,310},{100,135} },
-                       sx, sy, pal_RGBA(22, 36, 32, 255));
-
-        // 2. Great Plains & Mississippi Valley fertile basin
-        fillUsaPolygon({ {355,110},{580,115},{615,320},{580,465},{470,515},{370,410},{340,240} },
-                       sx, sy, pal_RGBA(28, 48, 38, 235));
-
-        // 3. Appalachian Highlands (Eastern ridge)
-        fillUsaPolygon({ {655,345},{755,215},{835,130},{855,165},{770,295},{695,385} },
-                       sx, sy, pal_RGBA(44, 52, 42, 235));
-
-        // 4. Cascade & Sierra Nevada Western Mountain Belt
-        fillUsaPolygon({ {110,115},{175,115},{185,375},{155,395},{115,295} },
-                       sx, sy, pal_RGBA(52, 54, 48, 240));
-
-        // 5. Rocky Mountain Spine (High-altitude elevation zone)
-        fillUsaPolygon({ {215,110},{345,110},{365,245},{355,415},{275,415},{225,270} },
-                       sx, sy, pal_RGBA(64, 62, 56, 245));
-
-        // 6. High Alpine Ridge Crest (Snow/granite peaks along Continental Divide)
-        fillUsaPolygon({ {245,125},{315,125},{335,255},{325,385},{290,385},{265,245} },
-                       sx, sy, pal_RGBA(92, 96, 102, 210));
-
-        // 7. Subtle topographic contour lines & Mississippi River channel
-        iV_Line(static_cast<int>(535 * sx), static_cast<int>(135 * sy), static_cast<int>(568 * sx), static_cast<int>(310 * sy), pal_RGBA(35, 95, 145, 180));
-        iV_Line(static_cast<int>(568 * sx), static_cast<int>(310 * sy), static_cast<int>(575 * sx), static_cast<int>(475 * sy), pal_RGBA(35, 95, 145, 180));
-    }
-
-    void drawThickNeonSegment(int x0, int y0, int x1, int y1, PIELIGHT halo, PIELIGHT core, PIELIGHT filament)
-    {
-        // 1. Soft 5px outer neon bloom
-        for (int ox = -2; ox <= 2; ++ox)
-        {
-            for (int oy = -2; oy <= 2; ++oy)
-            {
-                if (std::abs(ox) + std::abs(oy) <= 3)
-                {
-                    iV_Line(x0 + ox, y0 + oy, x1 + ox, y1 + oy, halo);
-                }
-            }
-        }
-        // 2. Bright 3px faction-tinted neon tube
-        iV_Line(x0 - 1, y0, x1 - 1, y1, core);
-        iV_Line(x0 + 1, y0, x1 + 1, y1, core);
-        iV_Line(x0, y0 - 1, x1, y1 - 1, core);
-        iV_Line(x0, y0 + 1, x1, y1 + 1, core);
-        // 3. Crisp white-hot inner filament sealing any subpixel seam
-        iV_Line(x0, y0, x1, y1, filament);
-    }
-
-    void drawUsaRadarSweep(int mapX, int mapY, int mapW, int mapH)
-    {
-        uint64_t ms = SDL_GetTicks();
-        float cycle = static_cast<float>(ms % 4200ULL) / 4200.0f;
-        int scanX = mapX + 4 + static_cast<int>(cycle * static_cast<float>(mapW - 8));
-
-        for (int b = 1; b <= 16; ++b)
-        {
-            int bx0 = scanX - b * 6;
-            int bx1 = bx0 + 6;
-            if (bx1 <= mapX + 4) continue;
-            bx0 = std::max(mapX + 4, bx0);
-            uint8_t alpha = static_cast<uint8_t>(std::max(0, 75 - b * 5));
-            pie_UniTransBoxFill(bx0, mapY + 4, bx1, mapY + mapH - 4, pal_RGBA(45, 225, 255, alpha));
-        }
-
-        iV_Line(scanX, mapY + 4, scanX, mapY + mapH - 4, pal_RGBA(175, 252, 255, 250));
-        if (scanX - 1 > mapX + 4) iV_Line(scanX - 1, mapY + 4, scanX - 1, mapY + mapH - 4, pal_RGBA(70, 215, 255, 195));
-    }
+    void drawWzPng(const char* imgName, int x, int y, int w, int h) { static bool a = false; if (!a) { a = true; PHYSFS_mount("C:/Games/warzone2100_source/data/base", nullptr, 1); PHYSFS_mount("../../data/base", nullptr, 1); PHYSFS_mount("../data/base", nullptr, 1); PHYSFS_mount("data/base", nullptr, 1); if (IntImages == nullptr) IntImages = iV_LoadImageFile("images/intfac.img"); } if (iV_GetImage(WzString::fromUtf8(imgName)) != nullptr) iV_DrawImage2(WzString::fromUtf8(imgName), static_cast<float>(x), static_cast<float>(y), static_cast<float>(w), static_cast<float>(h)); }
+    void drawWzPlate(int x, int y, int w, int h, PIELIGHT fill, PIELIGHT border, bool ticks = true) { (void)fill; (void)border; pie_UniTransBoxFill(x, y, x + w, y + h, pal_RGBA(15, 22, 33, 246)); iV_Line(x, y, x + w, y, pal_RGBA(98, 124, 158, 235)); iV_Line(x, y, x, y + h, pal_RGBA(88, 112, 144, 225)); iV_Line(x, y + h, x + w, y + h, pal_RGBA(6, 9, 14, 255)); iV_Line(x + w, y, x + w, y + h, pal_RGBA(6, 9, 14, 255)); iV_Box(x + 1, y + 1, x + w - 1, y + h - 1, pal_RGBA(48, 64, 88, 255)); if (ticks) { PIELIGHT brk = pal_RGBA(130, 165, 205, 220); iV_Line(x + 2, y + 2, x + 12, y + 2, brk); iV_Line(x + 2, y + 2, x + 2, y + 12, brk); iV_Line(x + w - 12, y + 2, x + w - 2, y + 2, brk); iV_Line(x + w - 2, y + 2, x + w - 2, y + 12, brk); iV_Line(x + 2, y + h - 2, x + 12, y + h - 2, brk); iV_Line(x + 2, y + h - 12, x + 2, y + h - 2, brk); iV_Line(x + w - 12, y + h - 2, x + w - 2, y + h - 2, brk); iV_Line(x + w - 2, y + h - 12, x + w - 2, y + h - 2, brk); } }
+    void drawWzButton(int x, int y, int w, int h, const std::string& label, PIELIGHT fill, PIELIGHT accent, bool hovered = false) { (void)fill; (void)accent; PIELIGHT bg = hovered ? pal_RGBA(36, 54, 80, 250) : pal_RGBA(21, 31, 46, 246); PIELIGHT edge = hovered ? pal_RGBA(140, 175, 220, 255) : pal_RGBA(58, 76, 102, 255); pie_UniTransBoxFill(x, y, x + w, y + h, bg); iV_Line(x, y, x + w, y, hovered ? pal_RGBA(165, 198, 240, 255) : pal_RGBA(88, 112, 144, 220)); iV_Line(x, y, x, y + h, hovered ? pal_RGBA(150, 182, 225, 245) : pal_RGBA(78, 98, 128, 210)); iV_Line(x, y + h, x + w, y + h, pal_RGBA(6, 9, 14, 255)); iV_Line(x + w, y, x + w, y + h, pal_RGBA(6, 9, 14, 255)); iV_Box(x + 1, y + 1, x + w - 1, y + h - 1, edge); drawWzPng(hovered ? "image_indicator_dot_expand.png" : "image_indicator_dot.png", x + 10, y + (h / 2) - 7, 14, 14); iV_DrawText(label.c_str(), static_cast<float>(x + 32), static_cast<float>(y + (h / 2) + 4), font_regular); }
+    std::vector<UsaVec2> shiftPoly(const std::vector<UsaVec2>& poly, float mapScaleY, float mapOffY) { std::vector<UsaVec2> out; out.reserve(poly.size()); for (const auto& pt : poly) out.push_back({ pt.x, pt.y + (mapOffY / mapScaleY) }); return out; }
+    void drawUsaTerrainUnderMap(int mapX, int mapY, int mapW, int mapH, float sx, float mapScaleY, float mapOffY, const std::vector<Territory>& states) { pie_BoxFill(mapX + 2, mapY + 2, mapX + mapW - 2, mapY + mapH - 2, pal_RGBA(9, 17, 27, 255)); for (int gx = mapX + 44; gx < mapX + mapW - 4; gx += 44) iV_Line(gx, mapY + 3, gx, mapY + mapH - 3, pal_RGBA(16, 29, 44, 130)); for (int gy = mapY + 44; gy < mapY + mapH - 4; gy += 44) iV_Line(mapX + 3, gy, mapX + mapW - 3, gy, pal_RGBA(16, 29, 44, 130)); for (const auto& st : states) { PIELIGHT b = pal_RGBA(34, 52, 42, 255); const auto& c = st.code; if (c == "WA" || c == "OR" || c == "ID") b = pal_RGBA(26, 54, 42, 255); else if (c == "MT" || c == "WY" || c == "CO" || c == "UT") b = pal_RGBA(68, 64, 56, 255); else if (c == "NV" || c == "AZ" || c == "NM") b = pal_RGBA(82, 62, 44, 255); else if (c == "CA") b = pal_RGBA(64, 62, 46, 255); else if (c == "ND" || c == "SD" || c == "NE" || c == "KS" || c == "OK" || c == "TX") b = pal_RGBA(56, 62, 44, 255); else if (c == "MN" || c == "IA" || c == "MO" || c == "WI" || c == "IL" || c == "MI" || c == "IN" || c == "OH") b = pal_RGBA(34, 58, 42, 255); else if (c == "AR" || c == "LA" || c == "MS" || c == "AL" || c == "GA" || c == "FL" || c == "SC" || c == "NC" || c == "TN" || c == "KY") b = pal_RGBA(28, 56, 44, 255); fillUsaPolygon(shiftPoly(st.polygon, mapScaleY, mapOffY), sx, mapScaleY, b); } auto lineM = [&](float x0, float y0, float x1, float y1, PIELIGHT col) { iV_Line(static_cast<int>(x0 * sx), static_cast<int>(y0 * mapScaleY + mapOffY), static_cast<int>(x1 * sx), static_cast<int>(y1 * mapScaleY + mapOffY), col); }; lineM(225,118,252,195,pal_RGBA(116,120,126,155)); lineM(252,195,295,275,pal_RGBA(122,126,132,165)); lineM(295,275,288,365,pal_RGBA(116,120,126,155)); lineM(132,122,128,215,pal_RGBA(96,108,102,145)); lineM(128,215,162,315,pal_RGBA(104,102,94,145)); lineM(665,345,735,265,pal_RGBA(78,92,76,145)); lineM(735,265,815,175,pal_RGBA(78,92,76,145)); PIELIGHT rv = pal_RGBA(34,102,158,200); lineM(536,145,558,245,rv); lineM(558,245,572,345,rv); lineM(572,345,582,458,rv); lineM(340,148,465,225,rv); lineM(465,225,558,278,rv); lineM(695,235,572,305,rv); lineM(245,275,212,385,rv); lineM(315,345,425,488,rv); auto lake = [&](std::vector<UsaVec2> pts) { fillUsaPolygon(shiftPoly(pts, mapScaleY, mapOffY), sx, mapScaleY, pal_RGBA(16,48,78,245)); for (size_t i = 0; i < pts.size(); ++i) lineM(pts[i].x, pts[i].y, pts[(i+1)%pts.size()].x, pts[(i+1)%pts.size()].y, pal_RGBA(58,122,175,215)); }; lake({{545,136},{598,128},{612,142},{565,150}}); lake({{594,156},{612,156},{614,212},{596,212}}); lake({{618,154},{646,162},{642,196},{618,188}}); lake({{644,206},{684,196},{686,208},{646,216}}); lake({{688,184},{718,178},{720,188},{690,192}}); }
+    void drawRetroOceanAndRadar(int mapX, int mapY, int mapW, int mapH, float sx, float sy) { uint64_t ms = SDL_GetTicks(); pie_BoxFill(mapX + 2, mapY + 2, mapX + mapW - 2, mapY + mapH - 2, pal_RGBA(7, 15, 25, 255)); for (int y = mapY + 6; y < mapY + mapH - 4; y += 6) { uint8_t a = ((y / 6) % 2 == 0) ? 55 : 22; iV_Line(mapX + 3, y, mapX + mapW - 3, y, pal_RGBA(14, 38, 62, a)); } for (int gx = mapX + 44; gx < mapX + mapW - 4; gx += 44) { iV_Line(gx, mapY + 3, gx, mapY + mapH - 3, pal_RGBA(22, 56, 86, 135)); iV_Line(gx, mapY + 3, gx, mapY + 8, pal_RGBA(70, 175, 225, 190)); } for (int gy = mapY + 44; gy < mapY + mapH - 4; gy += 44) { iV_Line(mapX + 3, gy, mapX + mapW - 3, gy, pal_RGBA(22, 56, 86, 135)); iV_Line(mapX + 3, gy, mapX + 8, gy, pal_RGBA(70, 175, 225, 190)); } auto sonarRing = [&](int cx, int cy, int baseR) { int r = baseR + static_cast<int>((ms / 38ULL) % 75ULL); uint8_t al = static_cast<uint8_t>(std::max(0, 135 - (r - baseR) * 2)); for (int s = 0; s < 36; ++s) { float a0 = s * 0.17453f, a1 = (s + 1) * 0.17453f; iV_Line(cx + static_cast<int>(std::cos(a0) * r), cy + static_cast<int>(std::sin(a0) * r), cx + static_cast<int>(std::cos(a1) * r), cy + static_cast<int>(std::sin(a1) * r), pal_RGBA(45, 185, 230, al)); } iV_Line(cx - 6, cy, cx + 6, cy, pal_RGBA(75, 210, 245, 185)); iV_Line(cx, cy - 6, cx, cy + 6, pal_RGBA(75, 210, 245, 185)); }; sonarRing(mapX + static_cast<int>(58 * sx), mapY + static_cast<int>(385 * sy), 18); sonarRing(mapX + static_cast<int>(805 * sx), mapY + static_cast<int>(395 * sy), 22); for (int w = 0; w < 9; ++w) { int wy = mapY + static_cast<int>((140 + w * 54) * sy); int shift = static_cast<int>((ms / 55ULL + w * 13ULL) % 28ULL); iV_Line(mapX + 14 + shift, wy, mapX + 46 + shift, wy, pal_RGBA(42, 145, 195, 140)); iV_Line(mapX + mapW - 58 + shift, wy + 12, mapX + mapW - 22 + shift, wy + 12, pal_RGBA(42, 145, 195, 140)); } }
+    void drawFlushStateBorder(int x0, int y0, int x1, int y1, PIELIGHT sh, PIELIGHT ln) { PIELIGHT glow = pal_RGBA(ln.byte.r, ln.byte.g, ln.byte.b, 85); iV_Line(x0 - 1, y0, x1 - 1, y1, glow); iV_Line(x0 + 1, y0, x1 + 1, y1, glow); iV_Line(x0, y0 - 1, x1, y1 - 1, glow); iV_Line(x0, y0 + 1, x1, y1 + 1, glow); (void)sh; iV_Line(x0, y0, x1, y1, pal_RGBA(std::min(255, ln.byte.r + 55), std::min(255, ln.byte.g + 55), std::min(255, ln.byte.b + 55), 255)); }
+    void drawStateInitialBadge(const std::string& code, int cx, int cy, bool isSel, bool isHov) { int bx = cx - 12, by = cy - 7; pie_UniTransBoxFill(bx, by, bx + 24, by + 15, isSel ? pal_RGBA(36, 38, 32, 245) : (isHov ? pal_RGBA(22, 38, 58, 232) : pal_RGBA(10, 16, 25, 215))); iV_Box(bx, by, bx + 24, by + 15, isSel ? pal_RGBA(198, 182, 128, 255) : (isHov ? pal_RGBA(120, 175, 225, 235) : pal_RGBA(58, 78, 104, 200))); iV_DrawText(code.c_str(), static_cast<float>(bx + 4), static_cast<float>(by + 11), font_regular); }
 }
 void renderUsaOverworldUi()
 {
@@ -566,40 +450,14 @@ void renderUsaOverworldUi()
     drawWzPlate(mapX, mapY, mapW, mapH, pal_RGBA(9, 17, 28, 255), pal_RGBA(55, 105, 155, 255), true);
 
     const float mapScaleY = sy * 1.24f, mapOffY = -20.0f * sy;
-    drawUsaTerrainUnderMap(sx, mapScaleY);
-
+    drawRetroOceanAndRadar(mapX, mapY, mapW, mapH, sx, sy);
     const UsaVec2 hoverPt{ static_cast<float>(mx) / sx, (static_cast<float>(my) - mapOffY) / mapScaleY };
-    for (int i = 0; i < static_cast<int>(camp.states.size()); ++i)
-    {
-        const Territory& st = camp.states[i];
-        bool isSel = (i == camp.selectedIndex), isHov = usaPointInPolygon(hoverPt, st.polygon);
-        UsaColor c = getUsaFactionColor(st.owner, isSel || isHov);
-        std::vector<UsaVec2> shifted;
-        for (const auto& pt : st.polygon) shifted.push_back({ pt.x, pt.y + (mapOffY / mapScaleY) });
-        fillUsaPolygon(shifted, sx, mapScaleY, pal_RGBA(c.r, c.g, c.b, isSel ? 185 : (isHov ? 160 : 128)));
-    }
-
-    for (int i = 0; i < static_cast<int>(camp.states.size()); ++i)
-    {
-        const Territory& st = camp.states[i];
-        bool isSel = (i == camp.selectedIndex);
-        UsaColor c = getUsaFactionColor(st.owner, true);
-        PIELIGHT halo = isSel ? pal_RGBA(255, 220, 60, 95) : pal_RGBA(c.r, c.g, c.b, 55);
-        PIELIGHT core = isSel ? pal_RGBA(255, 245, 130, 255) : pal_RGBA(std::min(255, c.r + 55), std::min(255, c.g + 55), std::min(255, c.b + 55), 220);
-        PIELIGHT fil  = isSel ? pal_RGBA(255, 255, 235, 255) : pal_RGBA(std::min(255, c.r + 120), std::min(255, c.g + 120), std::min(255, c.b + 120), 255);
-        for (size_t p = 0; p < st.polygon.size(); ++p)
-        {
-            const UsaVec2& a = st.polygon[p]; const UsaVec2& b = st.polygon[(p + 1) % st.polygon.size()];
-            int x0 = static_cast<int>(a.x * sx), y0 = static_cast<int>(a.y * mapScaleY + mapOffY);
-            int x1 = static_cast<int>(b.x * sx), y1 = static_cast<int>(b.y * mapScaleY + mapOffY);
-            drawThickNeonSegment(x0, y0, x1, y1, halo, core, fil);
-            pie_BoxFill(x0 - 1, y0 - 1, x0 + 2, y0 + 2, fil);
-        }
-        iV_DrawText(st.code.c_str(), st.labelPos.x * sx, (st.labelPos.y + 10.0f) * mapScaleY + mapOffY, font_regular);
-    }
-
-    drawUsaRadarSweep(mapX, mapY, mapW, mapH);
-    iV_DrawText("FACTIONS:  [BLUE] THE PROJECT   [ORANGE] NEW PARADIGM   [RED] THE COLLECTIVE   [PURPLE] NEXUS   [TEAL] SCAV SYNDICATE", 28.0f * sx, 706.0f * sy, font_regular);
+    for (int i = 0; i < static_cast<int>(camp.states.size()); ++i) { const Territory& st = camp.states[i]; bool isSel = (i == camp.selectedIndex), isHov = usaPointInPolygon(hoverPt, st.polygon); UsaColor c = getUsaFactionColor(st.owner, isSel || isHov); fillUsaPolygon(shiftPoly(st.polygon, mapScaleY, mapOffY), sx, mapScaleY, pal_RGBA(c.r, c.g, c.b, 255)); }
+    for (int i = 0; i < static_cast<int>(camp.states.size()); ++i) { if (i == camp.selectedIndex) continue; const Territory& st = camp.states[i]; bool isHov = usaPointInPolygon(hoverPt, st.polygon); UsaColor c = getUsaFactionColor(st.owner, isHov); PIELIGHT ln = pal_RGBA(std::min(255, c.r + (isHov ? 115 : 75)), std::min(255, c.g + (isHov ? 115 : 75)), std::min(255, c.b + (isHov ? 115 : 75)), 240); for (size_t p = 0; p < st.polygon.size(); ++p) { const auto& a = st.polygon[p]; const auto& b = st.polygon[(p + 1) % st.polygon.size()]; drawFlushStateBorder(static_cast<int>(std::lround(a.x * sx)), static_cast<int>(std::lround(a.y * mapScaleY + mapOffY)), static_cast<int>(std::lround(b.x * sx)), static_cast<int>(std::lround(b.y * mapScaleY + mapOffY)), pal_RGBA(8, 12, 18, 235), ln); } }
+    if (camp.selectedIndex >= 0 && camp.selectedIndex < static_cast<int>(camp.states.size())) { const Territory& selSt = camp.states[camp.selectedIndex]; for (size_t p = 0; p < selSt.polygon.size(); ++p) { const auto& a = selSt.polygon[p]; const auto& b = selSt.polygon[(p + 1) % selSt.polygon.size()]; drawFlushStateBorder(static_cast<int>(std::lround(a.x * sx)), static_cast<int>(std::lround(a.y * mapScaleY + mapOffY)), static_cast<int>(std::lround(b.x * sx)), static_cast<int>(std::lround(b.y * mapScaleY + mapOffY)), pal_RGBA(12, 10, 4, 255), pal_RGBA(198, 182, 128, 255)); } }
+    for (int i = 0; i < static_cast<int>(camp.states.size()); ++i) { const Territory& st = camp.states[i]; bool isSel = (i == camp.selectedIndex), isHov = usaPointInPolygon(hoverPt, st.polygon); int cx = static_cast<int>(std::lround((st.labelPos.x + 8.0f) * sx)), cy = static_cast<int>(std::lround((st.labelPos.y + 5.0f) * mapScaleY + mapOffY)); int ox = 0, oy = 0; if (st.code == "RI") { ox = 26; oy = 10; } else if (st.code == "CT") { ox = 24; oy = 22; } else if (st.code == "DE") { ox = 26; oy = 6; } else if (st.code == "NJ") { ox = 24; oy = -2; } else if (st.code == "MD") { ox = 22; oy = 18; } if (ox != 0 || oy != 0) { int lx = cx + static_cast<int>(ox * sx), ly = cy + static_cast<int>(oy * sy); iV_Line(cx, cy, lx, ly, pal_RGBA(165, 195, 230, 220)); drawStateInitialBadge(st.code, lx, ly, isSel, isHov); } else { drawStateInitialBadge(st.code, cx, cy, isSel, isHov); } }
+    uint64_t rMs = SDL_GetTicks(); int scanX = mapX + 4 + static_cast<int>((static_cast<float>(rMs % 4400ULL) / 4400.0f) * static_cast<float>(mapW - 8)); for (int b = 1; b <= 14; ++b) { int bx0 = std::max(mapX + 4, scanX - b * 5); int bx1 = bx0 + 5; if (bx1 > mapX + 4) pie_UniTransBoxFill(bx0, mapY + 4, bx1, mapY + mapH - 4, pal_RGBA(45, 215, 255, static_cast<uint8_t>(std::max(0, 62 - b * 4)))); } iV_Line(scanX, mapY + 4, scanX, mapY + mapH - 4, pal_RGBA(155, 248, 255, 235)); iV_DrawText("SAT-LINK // CONUS GRID 38N 97W", static_cast<float>(mapX + 14), static_cast<float>(mapY + 18), font_regular);
+    std::vector<UsaFaction> activeFactions = { UsaFaction::THE_PROJECT, UsaFaction::NEW_PARADIGM }; std::vector<int> factionCounts = { 0, 0 }; for (const auto& st : camp.states) { auto it = std::find(activeFactions.begin(), activeFactions.end(), st.owner); if (it == activeFactions.end()) { activeFactions.push_back(st.owner); factionCounts.push_back(1); } else { factionCounts[std::distance(activeFactions.begin(), it)]++; } } std::vector<size_t> visIdx; for (size_t f = 0; f < activeFactions.size(); ++f) { if (factionCounts[f] > 0 || activeFactions[f] == UsaFaction::THE_PROJECT || activeFactions[f] == UsaFaction::NEW_PARADIGM) visIdx.push_back(f); } int cols = 5, rows = std::max(1, (static_cast<int>(visIdx.size()) + cols - 1) / cols); int legH = rows * 18 + 8, legX = mapX + 10, legY = mapY + mapH - legH - 6, legW = mapW - 20; pie_UniTransBoxFill(legX, legY, legX + legW, legY + legH, pal_RGBA(10, 17, 27, 240)); iV_Box(legX, legY, legX + legW, legY + legH, pal_RGBA(56, 86, 122, 230)); int colW = (legW - 16) / cols; for (size_t idx = 0; idx < visIdx.size(); ++idx) { size_t f = visIdx[idx]; int r = static_cast<int>(idx) / cols, c = static_cast<int>(idx) % cols; int curX = legX + 10 + c * colW, curY = legY + 5 + r * 18; UsaColor fc = getUsaFactionColor(activeFactions[f], false); pie_BoxFill(curX, curY + 1, curX + 11, curY + 12, pal_RGBA(fc.r, fc.g, fc.b, 255)); iV_Box(curX, curY + 1, curX + 11, curY + 12, pal_RGBA(std::min(255, fc.r + 85), std::min(255, fc.g + 85), std::min(255, fc.b + 85), 255)); std::string entry = getUsaFactionName(activeFactions[f]) + " [" + std::to_string(factionCounts[f]) + "]"; iV_DrawText(entry.c_str(), static_cast<float>(curX + 16), static_cast<float>(curY + 11), font_regular); }
     const int tabStartX = static_cast<int>(910 * sx), tabY = static_cast<int>(65 * sy), tabW = static_cast<int>(105 * sx), tabH = static_cast<int>(36 * sy), tabGap = static_cast<int>(5 * sx);
     std::array<const char*, 4> tabNames = {{ "SECTOR", "RESEARCH", "DESIGN", "GENERAL" }};
     for (int tb = 0; tb < 4; ++tb)

@@ -6,11 +6,23 @@
 
 enum class UsaFaction
 {
-    THE_PROJECT = 0, // Player (Blue)
-    NEW_PARADIGM,    // Southwest/Rockies (Amber/Orange)
-    THE_COLLECTIVE,  // Midwest/Plains (Red)
-    NEXUS_REMNANT,   // Northeast/Rust Belt (Purple)
-    SCAV_SYNDICATE   // Northwest/Outlands (Olive/Teal)
+    THE_PROJECT = 0,
+    NEW_PARADIGM,
+    THE_COLLECTIVE,
+    NEXUS_REMNANT,
+    SCAV_SYNDICATE,
+    SCAV_PACIFIC,
+    SCAV_ROCKIES,
+    SCAV_DESERT,
+    SCAV_BADLANDS,
+    SCAV_HEARTLAND,
+    SCAV_LAKES,
+    SCAV_OHIO,
+    SCAV_GULF,
+    SCAV_PIEDMONT,
+    SCAV_ATLANTIC,
+    SCAV_NEW_ENGLAND,
+    SCAV_NORTHWOODS
 };
 
 struct UsaVec2 { float x = 0.0f; float y = 0.0f; };

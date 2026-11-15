@@ -158,35 +158,47 @@ UsaCampaignState& getUsaCampaignState()
 
 UsaColor getUsaFactionColor(UsaFaction f, bool isSelected)
 {
-    UsaColor c{40, 125, 225, 255};
+    int lift = isSelected ? 22 : 0;
     switch (f)
     {
-    case UsaFaction::THE_PROJECT:    c = UsaColor{40, 125, 225, 255};  break;
-    case UsaFaction::NEW_PARADIGM:   c = UsaColor{220, 125, 35, 255};  break;
-    case UsaFaction::THE_COLLECTIVE: c = UsaColor{200, 48, 48, 255};   break;
-    case UsaFaction::NEXUS_REMNANT:  c = UsaColor{145, 55, 195, 255};  break;
-    case UsaFaction::SCAV_SYNDICATE: c = UsaColor{55, 145, 110, 255};  break;
+    case UsaFaction::THE_PROJECT:      return { static_cast<uint8_t>(44 + lift),  static_cast<uint8_t>(84 + lift),  static_cast<uint8_t>(128 + lift), 255 }; // Player Steel-Blue
+    case UsaFaction::NEW_PARADIGM:     return { static_cast<uint8_t>(148 + lift), static_cast<uint8_t>(94 + lift),  static_cast<uint8_t>(38 + lift),  255 }; // Neo Paradigm Amber
+    case UsaFaction::SCAV_PACIFIC:     return { static_cast<uint8_t>(48 + lift),  static_cast<uint8_t>(88 + lift),  static_cast<uint8_t>(74 + lift),  255 }; // Pacific Pine-Teal
+    case UsaFaction::SCAV_ROCKIES:     return { static_cast<uint8_t>(88 + lift),  static_cast<uint8_t>(76 + lift),  static_cast<uint8_t>(62 + lift),  255 }; // Rockies Granite
+    case UsaFaction::SCAV_DESERT:      return { static_cast<uint8_t>(112 + lift), static_cast<uint8_t>(74 + lift),  static_cast<uint8_t>(52 + lift),  255 }; // Desert Terracotta
+    case UsaFaction::SCAV_BADLANDS:    return { static_cast<uint8_t>(92 + lift),  static_cast<uint8_t>(92 + lift),  static_cast<uint8_t>(54 + lift),  255 }; // Badlands Ochre-Olive
+    case UsaFaction::SCAV_HEARTLAND:   return { static_cast<uint8_t>(62 + lift),  static_cast<uint8_t>(94 + lift),  static_cast<uint8_t>(56 + lift),  255 }; // Heartland Moss
+    case UsaFaction::SCAV_LAKES:       return { static_cast<uint8_t>(52 + lift),  static_cast<uint8_t>(84 + lift),  static_cast<uint8_t>(94 + lift),  255 }; // Lakes Slate-Teal
+    case UsaFaction::SCAV_OHIO:        return { static_cast<uint8_t>(84 + lift),  static_cast<uint8_t>(80 + lift),  static_cast<uint8_t>(64 + lift),  255 }; // Ohio Khaki-Olive
+    case UsaFaction::SCAV_GULF:        return { static_cast<uint8_t>(46 + lift),  static_cast<uint8_t>(86 + lift),  static_cast<uint8_t>(64 + lift),  255 }; // Gulf Bayou-Green
+    case UsaFaction::SCAV_PIEDMONT:    return { static_cast<uint8_t>(96 + lift),  static_cast<uint8_t>(66 + lift),  static_cast<uint8_t>(62 + lift),  255 }; // Piedmont Clay
+    case UsaFaction::SCAV_ATLANTIC:    return { static_cast<uint8_t>(68 + lift),  static_cast<uint8_t>(72 + lift),  static_cast<uint8_t>(96 + lift),  255 }; // Atlantic Iron-Slate
+    case UsaFaction::SCAV_NEW_ENGLAND: return { static_cast<uint8_t>(58 + lift),  static_cast<uint8_t>(88 + lift),  static_cast<uint8_t>(82 + lift),  255 }; // New England Sea-Sage
+    case UsaFaction::SCAV_NORTHWOODS:  return { static_cast<uint8_t>(66 + lift),  static_cast<uint8_t>(82 + lift),  static_cast<uint8_t>(58 + lift),  255 }; // Northwoods Forest
+    default:                           return { static_cast<uint8_t>(62 + lift),  static_cast<uint8_t>(84 + lift),  static_cast<uint8_t>(72 + lift),  255 };
     }
-    if (isSelected)
-    {
-        c.r = static_cast<uint8_t>(std::min(255, static_cast<int>(c.r) + 55));
-        c.g = static_cast<uint8_t>(std::min(255, static_cast<int>(c.g) + 55));
-        c.b = static_cast<uint8_t>(std::min(255, static_cast<int>(c.b) + 55));
-    }
-    return c;
 }
 
 std::string getUsaFactionName(UsaFaction f)
 {
     switch (f)
     {
-    case UsaFaction::THE_PROJECT:    return "The Project (YOU)";
-    case UsaFaction::NEW_PARADIGM:   return "New Paradigm";
-    case UsaFaction::THE_COLLECTIVE: return "The Collective";
-    case UsaFaction::NEXUS_REMNANT:  return "NEXUS Remnant";
-    case UsaFaction::SCAV_SYNDICATE: return "Western Scav Syndicate";
+    case UsaFaction::THE_PROJECT:      return "The Project";
+    case UsaFaction::NEW_PARADIGM:     return "Neo Paradigm";
+    case UsaFaction::SCAV_PACIFIC:     return "Pacific Scavs";
+    case UsaFaction::SCAV_ROCKIES:     return "Rockies Scavs";
+    case UsaFaction::SCAV_DESERT:      return "Desert Scavs";
+    case UsaFaction::SCAV_BADLANDS:    return "Badlands Scavs";
+    case UsaFaction::SCAV_HEARTLAND:   return "Heartland Scavs";
+    case UsaFaction::SCAV_LAKES:       return "Lakes Scavs";
+    case UsaFaction::SCAV_OHIO:        return "Ohio Scavs";
+    case UsaFaction::SCAV_GULF:        return "Gulf Scavs";
+    case UsaFaction::SCAV_PIEDMONT:    return "Piedmont Scavs";
+    case UsaFaction::SCAV_ATLANTIC:    return "Atlantic Scavs";
+    case UsaFaction::SCAV_NEW_ENGLAND: return "New England Scavs";
+    case UsaFaction::SCAV_NORTHWOODS:  return "Northwoods Scavs";
+    default:                           return "Scav Warlords";
     }
-    return "Unknown";
 }
 
 bool usaPointInPolygon(const UsaVec2& p, const std::vector<UsaVec2>& poly)
@@ -219,6 +231,7 @@ void UsaCampaignState::initDefault()
     props  = { { "wheeled01", "Wheels", 30, 20, 0, "High Road Speed" }, { "HalfTrack", "Half-Tracks", 60, 65, 0, "All-Terrain" }, { "tracked01", "Heavy Tracks", 110, 140, 0, "Max Armor" } };
     weapons = { { "MG1Mk1", "Machinegun", 40, 0, 25, "Anti-Infantry" }, { "Cannon1Mk1", "Light Cannon", 95, 0, 65, "Anti-Vehicle" }, { "Rocket-Pod", "Mini-Rocket Pod", 120, 0, 85, "Burst Barrage" }, { "Mortar1Mk1", "Mortar Turret", 110, 0, 75, "Indirect Artillery" } };
     squad = { { "Cobra Half-Track Cannon", "Body5REC", "HalfTrack", "Cannon1Mk1", 285, 2 } };
+    for (auto& st : states) { const auto& c = st.code; if (c == "CA") st.owner = UsaFaction::THE_PROJECT; else if (c == "TX") st.owner = UsaFaction::NEW_PARADIGM; else if (c == "WA" || c == "OR" || c == "NV" || c == "ID") st.owner = UsaFaction::SCAV_PACIFIC; else if (c == "MT" || c == "WY" || c == "UT" || c == "CO") st.owner = UsaFaction::SCAV_ROCKIES; else if (c == "AZ" || c == "NM" || c == "OK" || c == "KS") st.owner = UsaFaction::SCAV_DESERT; else if (c == "ND" || c == "SD" || c == "NE" || c == "MN") st.owner = UsaFaction::SCAV_BADLANDS; else if (c == "IA" || c == "MO" || c == "AR" || c == "LA") st.owner = UsaFaction::SCAV_HEARTLAND; else if (c == "WI" || c == "IL" || c == "MI" || c == "IN") st.owner = UsaFaction::SCAV_LAKES; else if (c == "OH" || c == "KY" || c == "TN" || c == "WV") st.owner = UsaFaction::SCAV_OHIO; else if (c == "MS" || c == "AL" || c == "GA" || c == "FL") st.owner = UsaFaction::SCAV_GULF; else if (c == "SC" || c == "NC" || c == "VA" || c == "MD") st.owner = UsaFaction::SCAV_PIEDMONT; else if (c == "PA" || c == "NY" || c == "NJ" || c == "DE") st.owner = UsaFaction::SCAV_ATLANTIC; else if (c == "CT" || c == "RI" || c == "MA" || c == "VT") st.owner = UsaFaction::SCAV_NEW_ENGLAND; else st.owner = UsaFaction::SCAV_NORTHWOODS; }
 }
 bool UsaCampaignState::saveToPhysfs() const
 {
