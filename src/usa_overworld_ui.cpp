@@ -145,11 +145,11 @@ void usaInitOverworldUi()
 bool runUsaOverworldUi()
 {
     UsaCampaignState& camp = getUsaCampaignState();
+    const int sw = std::max(1024, static_cast<int>(screenWidth)), sh = std::max(700, static_cast<int>(screenHeight));
+    const float sx = static_cast<float>(sw) / 1360.0f, sy = static_cast<float>(sh) / 780.0f;
+    const int mx = mouseX(), my = mouseY();
     if (!camp.campaignConfigured)
     {
-        const int sw = std::max(1024, static_cast<int>(screenWidth)), sh = std::max(700, static_cast<int>(screenHeight));
-        const float sx = static_cast<float>(sw) / 1360.0f, sy = static_cast<float>(sh) / 780.0f;
-        const int mx = mouseX(), my = mouseY();
         if (keyPressed(KEY_BACKSPACE) && !camp.playerFactionName.empty()) camp.playerFactionName.pop_back();
         for (int k = KEY_A; k <= KEY_Z; ++k) { if (keyPressed(static_cast<KEY_CODE>(k)) && camp.playerFactionName.size() < 22) { bool shf = keyDown(KEY_LSHIFT) || keyDown(KEY_RSHIFT) || camp.playerFactionName.empty() || camp.playerFactionName.back() == ' '; char ch = static_cast<char>((shf ? 'A' : 'a') + (k - KEY_A)); camp.playerFactionName.push_back(ch); } }
         if (keyPressed(KEY_SPACE) && !camp.playerFactionName.empty() && camp.playerFactionName.back() != ' ' && camp.playerFactionName.size() < 22) camp.playerFactionName.push_back(' ');
@@ -162,13 +162,6 @@ bool runUsaOverworldUi()
         }
         return true;
     }
-{
-    UsaCampaignState& camp = getUsaCampaignState();
-    const int sw = std::max(1024, static_cast<int>(screenWidth));
-    const int sh = std::max(700, static_cast<int>(screenHeight));
-    const float sx = static_cast<float>(sw) / 1360.0f;
-    const float sy = static_cast<float>(sh) / 780.0f;
-    const int mx = mouseX(), my = mouseY();
 
     if (keyPressed(KEY_ESC))
     {
@@ -441,11 +434,11 @@ namespace
 void renderUsaOverworldUi()
 {
     UsaCampaignState& camp = getUsaCampaignState();
+    const int sw = std::max(1024, static_cast<int>(screenWidth)), sh = std::max(700, static_cast<int>(screenHeight));
+    const float sx = static_cast<float>(sw) / 1360.0f, sy = static_cast<float>(sh) / 780.0f;
+    const int mx = mouseX(), my = mouseY();
     if (!camp.campaignConfigured)
     {
-        const int sw = std::max(1024, static_cast<int>(screenWidth)), sh = std::max(700, static_cast<int>(screenHeight));
-        const float sx = static_cast<float>(sw) / 1360.0f, sy = static_cast<float>(sh) / 780.0f;
-        const int mx = mouseX(), my = mouseY();
         pie_BoxFill(0, 0, sw, sh, pal_RGBA(8, 13, 21, 255));
         for (int gx = 0; gx < sw; gx += 48) iV_Line(gx, 0, gx, sh, pal_RGBA(16, 26, 40, 140));
         for (int gy = 0; gy < sh; gy += 48) iV_Line(0, gy, sw, gy, pal_RGBA(16, 26, 40, 140));
@@ -472,13 +465,6 @@ void renderUsaOverworldUi()
         drawWzButton(lBtnX, lBtnY, lBtnW, lBtnH, "LAUNCH RECLAMATION CAMPAIGN", pal_RGBA(24, 52, 86, 255), pal_RGBA(140, 185, 235, 255), hitRect(mx, my, lBtnX, lBtnY, lBtnW, lBtnH));
         return;
     }
-{
-    UsaCampaignState& camp = getUsaCampaignState();
-    const int sw = std::max(1024, static_cast<int>(screenWidth));
-    const int sh = std::max(700, static_cast<int>(screenHeight));
-    const float sx = static_cast<float>(sw) / 1360.0f;
-    const float sy = static_cast<float>(sh) / 780.0f;
-    const int mx = mouseX(), my = mouseY();
 
     pie_BoxFill(0, 0, sw, sh, pal_RGBA(8, 13, 21, 255));
     for (int gx = 0; gx < sw; gx += 48) iV_Line(gx, 0, gx, sh, pal_RGBA(16, 26, 40, 140));
