@@ -6,6 +6,19 @@
 #include "usa_battle_setup.h"
 #include "usa_campaign_state.h"
 #include "template.h"
+#include "design.h"
+#include "lib/ivis_opengl/piestate.h"
+#include "lib/framework/frameresource.h"
+#include "intimage.h"
+#include "component.h"
+#include "init.h"
+#include "levels.h"
+#include "structure.h"
+#include "research.h"
+#include "lib/widget/widget.h"
+#include <physfs.h>
+#include "hci.h"
+#include "frontend.h"
 #include "usa_overworld_ui.h"
 #include "usa_battle_setup.h"
 
@@ -20,6 +33,7 @@
 #include "lib/widget/button.h"
 
 #include "hci.h"
+#include "frontend.h"
 #include "advvis.h"
 #include "visibility.h"
 #include "qtscript.h"
@@ -58,6 +72,69 @@ void usaProduceOpforUnits(bool isScav);
 bool bUsaPrebattle = false;
 bool bUsaStripVanillaLobby = (USA_RESTORE_VANILLA_SKIRMISH == 0);
 bool bUsaSessionActive = false;
+bool bUsaGeneralDesignMode = false;
+UsaOverworldDesignMode usaOverworldDesignMode = UsaOverworldDesignMode::NONE;
+
+namespace
+{
+    bool overworldDesignStatsLoaded = false;
+
+    bool usaEnsureOverworldDesignAssets()
+    {
+        if (overworldDesignStatsLoaded) return true;
+        rebuildSearchPath(mod_multiplay, true);
+        resLoad("wrf/vidmem3.wrf", 1);
+        resLoad("wrf/basic.wrf", 2);
+        resLoad("wrf/stats.wrf", 3);
+        resLoad("wrf/camres.wrf", 4);
+        if (IntImages == nullptr) imageInitBitmaps();
+        auto allocList = [](COMPONENT_TYPE t, size_t n) {
+            if (apCompLists[0][t] == nullptr && n > 0)
+            {
+                apCompLists[0][t] = new UBYTE[n];
+                std::memset(apCompLists[0][t], AVAILABLE, n);
+            }
+        };
+        allocList(COMP_BODY, asBodyStats.size());
+        allocList(COMP_PROPULSION, asPropulsionStats.size());
+        allocList(COMP_WEAPON, asWeaponStats.size());
+        allocList(COMP_SENSOR, asSensorStats.size());
+        allocList(COMP_ECM, asECMStats.size());
+        allocList(COMP_CONSTRUCT, asConstructStats.size());
+        allocList(COMP_REPAIRUNIT, asRepairStats.size());
+        allocList(COMP_BRAIN, asBrainStats.size());
+        selectedPlayer = 0;
+        overworldDesignStatsLoaded = !asBodyStats.empty();
+        return overworldDesignStatsLoaded;
+    }
+}
+
+void usaOpenOverworldDesigner(UsaOverworldDesignMode mode)
+{
+    if (!usaEnsureOverworldDesignAssets()) return;
+    if (usaOverworldDesignMode != UsaOverworldDesignMode::NONE)
+    {
+        intRemoveDesign();
+    }
+    usaOverworldDesignMode = mode;
+    bUsaGeneralDesignMode = (mode == UsaOverworldDesignMode::GENERAL_DESIGN);
+    bMultiPlayer = true;
+    intAddDesign(true);
+    intProcessDesign(IDDES_TEMPLSTART);
+    widgReveal(psWScreen, IDDES_STOREBUTTON); widgSetButtonState(psWScreen, IDDES_STOREBUTTON, 0);
+    widgReveal(psWScreen, IDDES_FORM);
+}
+
+void usaCloseOverworldDesigner()
+{
+    if (usaOverworldDesignMode != UsaOverworldDesignMode::NONE)
+    {
+        usaOverworldDesignMode = UsaOverworldDesignMode::NONE;
+        bUsaGeneralDesignMode = false;
+        intRemoveDesign();
+    }
+}
+bool bUsaExitDesignToMap = false;
 
 namespace
 {
@@ -171,6 +248,27 @@ void startUsaPrebattleScreen()
 void runUsaPrebattleTick()
 {
     if (!screenInitialized) startUsaPrebattleScreen();
+    if (usaOverworldDesignMode != UsaOverworldDesignMode::NONE)
+    {
+        if (keyPressed(KEY_ESC))
+        {
+            usaCloseOverworldDesigner();
+            renderUsaOverworldUi();
+            return;
+        }
+        pie_BoxFill(0, 0, static_cast<int>(screenWidth), static_cast<int>(screenHeight), pal_RGBA(14, 20, 30, 255));
+        WidgetTriggers const &triggers = widgRunScreen(psWScreen);
+        for (const auto &trigger : triggers)
+        {
+            if (trigger.widget != nullptr)
+            {
+                intProcessDesign(trigger.widget->id);
+            }
+        }
+        intRunDesign();
+        widgDisplayScreen(psWScreen);
+        return;
+    }
     if (!runUsaOverworldUi()) { screenInitialized = false; return; }
     renderUsaOverworldUi();
 }
@@ -405,6 +503,21 @@ void updateUsaInGameHud()
         return;
     }
 
+    if (false && bUsaGeneralDesignMode)
+    {
+        static bool designOpened = false;
+        if (!designOpened && psWScreen != nullptr)
+        {
+            designOpened = true;
+            bMultiPlayer = true;
+    intAddDesign(true);
+    intProcessDesign(IDDES_TEMPLSTART);
+    widgReveal(psWScreen, IDDES_STOREBUTTON); widgSetButtonState(psWScreen, IDDES_STOREBUTTON, 0);
+    widgReveal(psWScreen, IDDES_FORM);
+        }
+        return;
+    }
+
     if (!godMode)
     {
         godMode = true;
@@ -599,3 +712,4 @@ void updateUsaInGameHud()
         }
     }
 }
+

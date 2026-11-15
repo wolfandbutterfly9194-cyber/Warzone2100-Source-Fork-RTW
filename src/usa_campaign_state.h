@@ -44,6 +44,46 @@ struct TechUpgrade { std::string id; std::string label; int cost = 0; bool unloc
 struct ComponentDef { std::string id; std::string name; int cost = 0; int hpBonus = 0; int firepower = 0; std::string roleHint; };
 struct DesignedBlueprint { std::string name; std::string bodyId; std::string propId; std::string weaponId; int unitCost = 0; int count = 0; };
 
+struct GeneralPartOption
+{
+    std::string id;
+    std::string name;
+    int statBonus = 10;
+};
+
+struct GeneralUpgradeNode
+{
+    std::string id;
+    std::string label;
+    int level = 0;
+    int maxLevel = 5;
+    int baseCost = 200;
+};
+
+struct UsaGeneralVariant
+{
+    std::string name;
+    std::string bodyId;
+    std::string propId;
+    std::string weapon1Id;
+    std::string weapon2Id;
+};
+
+struct UsaGeneralState
+{
+    std::string name = "Supreme Commander (Dragon HQ)";
+    std::string bodyId = "";
+    std::string propId = "";
+    std::string weapon1Id = "";
+    std::string weapon2Id = "";
+    std::vector<GeneralPartOption> bodyOptions;
+    std::vector<GeneralPartOption> propOptions;
+    std::vector<GeneralPartOption> weap1Options;
+    std::vector<GeneralPartOption> weap2Options;
+    std::vector<GeneralUpgradeNode> upgrades;
+    std::vector<UsaGeneralVariant> variants;
+};
+
 struct UsaCampaignState
 {
     int turn = 1;
@@ -59,6 +99,8 @@ struct UsaCampaignState
     std::vector<ComponentDef> props;
     std::vector<ComponentDef> weapons;
     std::vector<DesignedBlueprint> squad;
+
+    UsaGeneralState general;
 
     void initDefault();
     bool saveToPhysfs() const;

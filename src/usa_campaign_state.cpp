@@ -10,101 +10,101 @@ namespace
 std::vector<Territory> buildContinentalUSA() {
     return {
         { "WA", "Washington",     Faction::SCAV_SYNDICATE, 150, "Sk-Rush",
-          { { 115,115 },{ 195,115 },{ 195,175 },{ 125,175 },{ 110,145 } },{ 142,138 },{ "OR","ID" } },
+          { {105,105},{195,105},{195,165},{115,165},{100,135} }, {145,132}, { "OR","ID" } },
         { "OR", "Oregon",         Faction::SCAV_SYNDICATE, 140, "Sk-Mountain",
-          { { 110,175 },{ 195,175 },{ 195,245 },{ 100,245 } },{ 138,202 },{ "WA","ID","NV","CA" } },
+          { {115,165},{195,165},{195,235},{150,235},{95,235} }, {140,196}, { "WA","ID","NV","CA" } },
         { "CA", "California",     Faction::THE_PROJECT,    260, "Sk-Startup",
-          { { 100,245 },{ 155,245 },{ 155,305 },{ 205,380 },{ 185,425 },{ 135,395 },{ 105,315 } },{ 135,325 },{ "OR","NV","AZ" } },
+          { {95,235},{150,235},{150,300},{195,375},{180,415},{130,390},{100,310} }, {128,322}, { "OR","NV","AZ" } },
         { "NV", "Nevada",         Faction::THE_PROJECT,    130, "Sk-SandCastles",
-          { { 155,245 },{ 220,245 },{ 220,340 },{ 195,365 },{ 155,305 } },{ 176,285 },{ "OR","ID","UT","AZ","CA" } },
+          { {150,235},{195,235},{215,235},{215,335},{195,375},{150,300} }, {176,282}, { "OR","ID","UT","AZ","CA" } },
         { "ID", "Idaho",          Faction::SCAV_SYNDICATE, 120, "Sk-HighGround",
-          { { 195,115 },{ 225,115 },{ 235,190 },{ 265,190 },{ 265,245 },{ 195,245 } },{ 215,195 },{ "WA","OR","NV","UT","WY","MT" } },
+          { {195,105},{225,105},{235,180},{265,180},{265,235},{215,235},{195,235},{195,165} }, {218,195}, { "WA","OR","NV","UT","WY","MT" } },
         { "MT", "Montana",        Faction::SCAV_SYNDICATE, 140, "Sk-HighGround",
-          { { 225,115 },{ 365,115 },{ 365,190 },{ 235,190 } },{ 285,145 },{ "ID","WY","ND","SD" } },
+          { {225,105},{365,105},{365,165},{365,180},{265,180},{235,180} }, {290,138}, { "ID","WY","ND","SD" } },
         { "WY", "Wyoming",        Faction::NEW_PARADIGM,   120, "Sk-BeggarsKanyon",
-          { { 265,190 },{ 365,190 },{ 365,260 },{ 265,260 } },{ 305,218 },{ "MT","ID","UT","CO","NE","SD" } },
+          { {265,180},{365,180},{365,225},{365,250},{280,250},{265,250},{265,235} }, {308,210}, { "MT","ID","UT","CO","NE","SD" } },
         { "UT", "Utah",           Faction::NEW_PARADIGM,   135, "Sk-Valley",
-          { { 220,245 },{ 280,245 },{ 280,335 },{ 220,335 } },{ 238,285 },{ "ID","WY","CO","AZ","NV" } },
+          { {215,235},{265,235},{265,250},{280,250},{280,335},{215,335} }, {240,285}, { "ID","WY","CO","AZ","NV" } },
         { "AZ", "Arizona",        Faction::NEW_PARADIGM,   165, "Sk-LittleEgypt",
-          { { 205,335 },{ 280,335 },{ 280,425 },{ 205,425 },{ 185,380 } },{ 232,372 },{ "CA","NV","UT","NM" } },
+          { {215,335},{280,335},{280,425},{215,425},{180,415},{195,375} }, {234,375}, { "CA","NV","UT","NM" } },
         { "CO", "Colorado",       Faction::NEW_PARADIGM,   175, "Sk-GreatRift",
-          { { 280,260 },{ 380,260 },{ 380,335 },{ 280,335 } },{ 318,290 },{ "WY","NE","KS","OK","NM","UT" } },
+          { {280,250},{365,250},{380,250},{380,280},{380,335},{365,335},{280,335} }, {322,288}, { "WY","NE","KS","OK","NM","UT" } },
         { "NM", "New Mexico",     Faction::NEW_PARADIGM,   145, "Sk-LittleEgypt",
-          { { 280,335 },{ 365,335 },{ 365,430 },{ 280,430 } },{ 312,375 },{ "AZ","CO","OK","TX" } },
+          { {280,335},{365,335},{365,365},{365,425},{280,425} }, {315,375}, { "AZ","CO","OK","TX" } },
         { "ND", "North Dakota",   Faction::THE_COLLECTIVE, 125, "Sk-RollingHills",
-          { { 365,115 },{ 465,115 },{ 465,175 },{ 365,175 } },{ 405,138 },{ "MT","SD","MN" } },
+          { {365,105},{465,105},{465,165},{365,165} }, {408,130}, { "MT","SD","MN" } },
         { "SD", "South Dakota",   Faction::THE_COLLECTIVE, 125, "Sk-RollingHills",
-          { { 365,175 },{ 465,175 },{ 465,235 },{ 365,235 } },{ 405,198 },{ "ND","MT","WY","NE","IA","MN" } },
+          { {365,165},{465,165},{465,205},{465,225},{365,225},{365,180} }, {408,190}, { "ND","MT","WY","NE","IA","MN" } },
         { "NE", "Nebraska",       Faction::THE_COLLECTIVE, 140, "Sk-BeggarsKanyon",
-          { { 365,235 },{ 475,235 },{ 485,290 },{ 380,290 },{ 380,260 },{ 365,260 } },{ 415,255 },{ "SD","WY","CO","KS","MO","IA" } },
+          { {365,225},{465,225},{475,225},{485,270},{485,280},{380,280},{380,250},{365,250} }, {418,248}, { "SD","WY","CO","KS","MO","IA" } },
         { "KS", "Kansas",         Faction::THE_COLLECTIVE, 150, "Sk-Clover",
-          { { 380,290 },{ 495,290 },{ 495,350 },{ 380,350 } },{ 428,312 },{ "NE","CO","OK","MO" } },
+          { {380,280},{485,280},{495,280},{495,335},{380,335} }, {430,305}, { "NE","CO","OK","MO" } },
         { "OK", "Oklahoma",       Faction::NEW_PARADIGM,   155, "Sk-BeggarsKanyon",
-          { { 365,350 },{ 505,350 },{ 505,405 },{ 405,405 },{ 405,375 },{ 365,375 } },{ 435,370 },{ "KS","CO","NM","TX","AR","MO" } },
+          { {365,335},{380,335},{495,335},{505,335},{505,345},{505,400},{405,400},{405,365},{365,365} }, {438,365}, { "KS","CO","NM","TX","AR","MO" } },
         { "TX", "Texas",          Faction::NEW_PARADIGM,   260, "Sk-GreatRift",
-          { { 365,375 },{ 405,375 },{ 405,405 },{ 515,405 },{ 525,475 },{ 465,535 },{ 425,495 },{ 385,485 },{ 355,430 } },{ 440,445 },{ "NM","OK","AR","LA" } },
+          { {365,365},{405,365},{405,400},{505,400},{515,400},{515,415},{520,470},{520,480},{465,530},{425,490},{385,480},{355,425},{365,425} }, {442,442}, { "NM","OK","AR","LA" } },
         { "MN", "Minnesota",      Faction::THE_COLLECTIVE, 165, "Sk-Valley",
-          { { 465,115 },{ 545,115 },{ 535,215 },{ 465,215 } },{ 492,158 },{ "ND","SD","IA","WI" } },
+          { {465,105},{545,105},{545,135},{535,205},{465,205},{465,165} }, {495,150}, { "ND","SD","IA","WI" } },
         { "IA", "Iowa",           Faction::THE_COLLECTIVE, 150, "Sk-Clover",
-          { { 465,215 },{ 545,215 },{ 555,275 },{ 475,275 } },{ 500,238 },{ "MN","SD","NE","MO","IL","WI" } },
+          { {465,205},{535,205},{545,215},{555,270},{485,270},{475,225},{465,225} }, {502,232}, { "MN","SD","NE","MO","IL","WI" } },
         { "MO", "Missouri",       Faction::THE_COLLECTIVE, 170, "Sk-Ziggurat",
-          { { 475,275 },{ 560,275 },{ 575,355 },{ 495,355 } },{ 515,308 },{ "IA","NE","KS","OK","AR","TN","KY","IL" } },
+          { {485,270},{555,270},{560,270},{568,305},{572,330},{575,345},{505,345},{505,335},{495,335},{495,280},{485,280} }, {522,302}, { "IA","NE","KS","OK","AR","TN","KY","IL" } },
         { "AR", "Arkansas",       Faction::THE_COLLECTIVE, 140, "Sk-LittleEgypt",
-          { { 495,355 },{ 570,355 },{ 565,420 },{ 505,420 } },{ 522,380 },{ "MO","OK","TX","LA","MS","TN" } },
+          { {505,345},{575,345},{568,370},{575,415},{515,415},{515,400},{505,400} }, {532,375}, { "MO","OK","TX","LA","MS","TN" } },
         { "LA", "Louisiana",      Faction::THE_COLLECTIVE, 160, "Sk-SandCastles",
-          { { 515,420 },{ 575,420 },{ 595,485 },{ 525,485 } },{ 542,448 },{ "AR","TX","MS" } },
+          { {515,415},{575,415},{575,450},{595,480},{520,480},{520,470} }, {544,444}, { "AR","TX","MS" } },
         { "WI", "Wisconsin",      Faction::THE_COLLECTIVE, 165, "Sk-RollingHills",
-          { { 535,145 },{ 605,155 },{ 600,225 },{ 545,225 } },{ 562,180 },{ "MN","IA","IL","MI" } },
+          { {545,135},{605,145},{600,215},{545,215},{535,205} }, {566,172}, { "MN","IA","IL","MI" } },
         { "IL", "Illinois",       Faction::THE_COLLECTIVE, 210, "Sk-Manhattan",
-          { { 545,225 },{ 600,225 },{ 605,315 },{ 565,315 },{ 555,275 } },{ 568,262 },{ "WI","IA","MO","KY","IN" } },
+          { {545,215},{600,215},{600,220},{605,295},{568,305},{560,270},{555,270} }, {570,255}, { "WI","IA","MO","KY","IN" } },
         { "MI", "Michigan",       Faction::NEXUS_REMNANT,  195, "Sk-Concrete",
-          { { 605,145 },{ 670,155 },{ 675,230 },{ 615,230 } },{ 635,185 },{ "WI","IN","OH" } },
+          { {605,145},{670,150},{675,220},{645,220},{600,220},{600,215} }, {638,178}, { "WI","IN","OH" } },
         { "IN", "Indiana",        Faction::NEXUS_REMNANT,  165, "Sk-Rush",
-          { { 600,230 },{ 645,230 },{ 645,305 },{ 605,305 } },{ 615,260 },{ "MI","IL","KY","OH" } },
+          { {600,220},{645,220},{645,285},{645,295},{605,295} }, {616,252}, { "MI","IL","KY","OH" } },
         { "OH", "Ohio",           Faction::NEXUS_REMNANT,  195, "Sk-Concrete",
-          { { 645,230 },{ 705,230 },{ 705,295 },{ 645,295 } },{ 665,255 },{ "MI","IN","KY","WV","PA" } },
+          { {645,220},{675,220},{705,215},{705,265},{675,270},{675,285},{645,285} }, {666,248}, { "MI","IN","KY","WV","PA" } },
         { "KY", "Kentucky",       Faction::THE_COLLECTIVE, 155, "Sk-Mountain",
-          { { 575,305 },{ 675,295 },{ 680,335 },{ 570,340 } },{ 622,312 },{ "IL","IN","OH","WV","VA","TN","MO" } },
+          { {568,305},{605,295},{645,295},{645,285},{675,285},{680,310},{685,330},{572,330} }, {625,308}, { "IL","IN","OH","WV","VA","TN","MO" } },
         { "TN", "Tennessee",      Faction::THE_COLLECTIVE, 165, "Sk-Valley",
-          { { 565,340 },{ 685,335 },{ 675,375 },{ 565,375 } },{ 615,348 },{ "KY","VA","NC","GA","AL","MS","AR","MO" } },
+          { {572,330},{685,330},{675,370},{665,370},{615,370},{568,370},{575,345} }, {618,345}, { "KY","VA","NC","GA","AL","MS","AR","MO" } },
         { "MS", "Mississippi",    Faction::THE_COLLECTIVE, 140, "Sk-LittleEgypt",
-          { { 565,375 },{ 615,375 },{ 615,455 },{ 575,455 } },{ 582,408 },{ "TN","AL","LA","AR" } },
+          { {568,370},{615,370},{615,450},{575,450},{575,415} }, {584,405}, { "TN","AL","LA","AR" } },
         { "AL", "Alabama",        Faction::THE_COLLECTIVE, 155, "Sk-Ziggurat",
-          { { 615,375 },{ 665,375 },{ 665,455 },{ 615,455 } },{ 630,408 },{ "TN","GA","FL","MS" } },
+          { {615,370},{665,370},{665,450},{645,450},{615,450} }, {632,405}, { "TN","GA","FL","MS" } },
         { "FL", "Florida",        Faction::NEW_PARADIGM,   210, "Sk-SandCastles",
-          { { 645,455 },{ 715,455 },{ 745,545 },{ 710,550 },{ 680,480 },{ 645,475 } },{ 695,495 },{ "AL","GA" } },
+          { {645,450},{665,450},{735,450},{750,540},{715,545},{685,475},{645,470} }, {702,492}, { "AL","GA" } },
         { "GA", "Georgia",        Faction::NEXUS_REMNANT,  185, "Sk-HighGround",
-          { { 665,375 },{ 725,375 },{ 735,455 },{ 665,455 } },{ 688,408 },{ "TN","NC","SC","FL","AL" } },
+          { {665,370},{675,370},{715,370},{735,415},{735,450},{665,450} }, {690,405}, { "TN","NC","SC","FL","AL" } },
         { "SC", "South Carolina", Faction::NEXUS_REMNANT,  150, "Sk-SandCastles",
-          { { 705,365 },{ 760,365 },{ 740,410 },{ 715,395 } },{ 725,378 },{ "NC","GA" } },
+          { {715,370},{760,365},{735,415} }, {726,378}, { "NC","GA" } },
         { "NC", "North Carolina", Faction::NEXUS_REMNANT,  180, "Sk-HighGround",
-          { { 685,335 },{ 785,335 },{ 765,370 },{ 680,365 } },{ 732,345 },{ "VA","TN","GA","SC" } },
+          { {685,330},{785,330},{760,365},{715,370},{675,370} }, {734,344}, { "VA","TN","GA","SC" } },
         { "VA", "Virginia",       Faction::NEXUS_REMNANT,  185, "Sk-BeggarsKanyon",
-          { { 695,290 },{ 780,295 },{ 785,335 },{ 685,335 } },{ 735,310 },{ "WV","MD","NC","TN","KY" } },
+          { {680,310},{695,285},{710,285},{778,290},{785,330},{685,330} }, {736,306}, { "WV","MD","NC","TN","KY" } },
         { "WV", "West Virginia",  Faction::NEXUS_REMNANT,  135, "Sk-Mountain",
-          { { 675,275 },{ 715,275 },{ 705,315 },{ 675,310 } },{ 685,288 },{ "OH","PA","MD","VA","KY" } },
+          { {675,270},{705,265},{710,265},{710,285},{695,285},{680,310},{675,285} }, {684,284}, { "OH","PA","MD","VA","KY" } },
         { "MD", "Maryland",       Faction::NEXUS_REMNANT,  160, "Sk-Concrete",
-          { { 725,270 },{ 780,270 },{ 780,295 },{ 725,295 } },{ 745,276 },{ "PA","DE","VA","WV" } },
+          { {710,265},{778,265},{778,290},{710,285} }, {742,272}, { "PA","DE","VA","WV" } },
         { "DE", "Delaware",       Faction::NEXUS_REMNANT,  120, "Sk-Rush",
-          { { 780,265 },{ 798,265 },{ 798,295 },{ 780,295 } },{ 782,274 },{ "PA","NJ","MD" } },
+          { {778,260},{796,260},{796,290},{778,290},{778,265} }, {781,270}, { "PA","NJ","MD" } },
         { "PA", "Pennsylvania",   Faction::NEXUS_REMNANT,  210, "Sk-Concrete",
-          { { 705,225 },{ 780,225 },{ 780,270 },{ 705,270 } },{ 732,240 },{ "NY","NJ","DE","MD","WV","OH" } },
-        { "NJ", "New Jersey",     Faction::NEXUS_REMNANT,  175, "Sk-Startup",
-          { { 780,225 },{ 802,225 },{ 802,265 },{ 780,265 } },{ 784,238 },{ "NY","PA","DE" } },
-        { "NY", "New York",       Faction::NEXUS_REMNANT,  250, "Sk-Manhattan",
-          { { 725,165 },{ 800,165 },{ 800,225 },{ 725,225 } },{ 755,188 },{ "VT","MA","CT","NJ","PA" } },
-        { "CT", "Connecticut",    Faction::NEXUS_REMNANT,  150, "Sk-Rush",
-          { { 800,205 },{ 830,205 },{ 830,225 },{ 800,225 } },{ 806,208 },{ "NY","MA","RI" } },
-        { "RI", "Rhode Island",   Faction::NEXUS_REMNANT,  125, "Sk-Startup",
-          { { 830,205 },{ 848,205 },{ 848,225 },{ 830,225 } },{ 832,208 },{ "CT","MA" } },
-        { "MA", "Massachusetts",  Faction::NEXUS_REMNANT,  175, "Sk-Manhattan",
-          { { 800,185 },{ 850,185 },{ 850,205 },{ 800,205 } },{ 815,188 },{ "VT","NH","RI","CT","NY" } },
-        { "VT", "Vermont",        Faction::NEXUS_REMNANT,  125, "Sk-Mountain",
-          { { 795,140 },{ 818,140 },{ 818,185 },{ 795,185 } },{ 799,155 },{ "NH","MA","NY" } },
-        { "NH", "New Hampshire",  Faction::NEXUS_REMNANT,  130, "Sk-Mountain",
-          { { 818,140 },{ 840,140 },{ 840,185 },{ 818,185 } },{ 822,155 },{ "ME","MA","VT" } },
-        { "ME", "Maine",          Faction::NEXUS_REMNANT,  145, "Sk-RollingHills",
-          { { 840,95 },{ 885,115 },{ 865,175 },{ 840,175 } },{ 852,130 },{ "NH" } }
+          { {705,215},{720,215},{778,215},{778,260},{778,265},{710,265},{705,265} }, {736,236}, { "NY","NJ","DE","MD","WV","OH" } },
+        { "NJ", "New Jersey",     Faction::NEXUS_REMNANT,  175, "Sk-Manhattan",
+          { {778,215},{795,215},{800,215},{800,260},{796,260},{778,260} }, {783,234}, { "NY","PA","DE" } },
+        { "NY", "New York",       Faction::NEXUS_REMNANT,  240, "Sk-Manhattan",
+          { {720,165},{788,165},{788,175},{792,175},{792,195},{795,195},{795,215},{778,215},{720,215} }, {754,186}, { "VT","MA","CT","NJ","PA" } },
+        { "CT", "Connecticut",    Faction::NEXUS_REMNANT,  140, "Sk-Concrete",
+          { {795,195},{820,195},{820,215},{800,215},{795,215} }, {801,201}, { "NY","MA","RI" } },
+        { "RI", "Rhode Island",   Faction::NEXUS_REMNANT,  110, "Sk-Rush",
+          { {820,195},{836,195},{836,215},{820,215} }, {822,201}, { "CT","MA" } },
+        { "MA", "Massachusetts",  Faction::NEXUS_REMNANT,  175, "Sk-Concrete",
+          { {792,175},{808,175},{828,175},{838,175},{838,195},{836,195},{820,195},{795,195},{792,195} }, {810,181}, { "NY","VT","NH","RI","CT" } },
+        { "VT", "Vermont",        Faction::NEXUS_REMNANT,  120, "Sk-Mountain",
+          { {788,135},{808,135},{808,175},{792,175},{788,175} }, {792,150}, { "NY","NH","MA" } },
+        { "NH", "New Hampshire",  Faction::NEXUS_REMNANT,  125, "Sk-Mountain",
+          { {808,135},{828,135},{828,170},{828,175},{808,175} }, {812,150}, { "VT","ME","MA" } },
+        { "ME", "Maine",          Faction::NEXUS_REMNANT,  145, "Sk-HighGround",
+          { {828,100},{872,115},{855,170},{828,170},{828,135} }, {844,132}, { "NH" } }
     };
 }
     void saveStateBasePhysfs(const Territory& t)
@@ -238,6 +238,12 @@ bool UsaCampaignState::saveToPhysfs() const
         out << "BLUEPRINT " << safeName << " " << bp.bodyId << " " << bp.propId << " " << bp.weaponId << " " << bp.unitCost << " " << bp.count << "\n";
     }
     std::string str = out.str();
+    out << "GENERAL_ACTIVE " << (general.bodyId.empty() ? "NONE" : general.bodyId) << " " << (general.propId.empty() ? "NONE" : general.propId) << " " << (general.weapon1Id.empty() ? "NONE" : general.weapon1Id) << " " << (general.weapon2Id.empty() ? "NONE" : general.weapon2Id) << "\n";
+    for (const auto& gv : general.variants)
+    {
+        std::string safeName = gv.name; for (char& c : safeName) if (c == ' ') c = '_';
+        out << "GENERAL_VARIANT " << safeName << " " << gv.bodyId << " " << gv.propId << " " << gv.weapon1Id << " " << gv.weapon2Id << "\n";
+    }
     PHYSFS_File* f = PHYSFS_openWrite("usa_campaign/usa_campaign_save.txt");
     if (f == nullptr) return false;
     PHYSFS_writeBytes(f, str.data(), str.size());
@@ -256,13 +262,26 @@ bool UsaCampaignState::loadFromPhysfs()
     PHYSFS_readBytes(f, content.data(), static_cast<PHYSFS_uint64>(len));
     PHYSFS_close(f);
 
-    squad.clear();
+    squad.clear(); general.variants.clear();
     std::istringstream in(content);
     std::string tag;
     while (in >> tag)
     {
         if (tag == "TURN") in >> turn;
         else if (tag == "POWER") in >> power;
+        else if (tag == "GENERAL_ACTIVE")
+        {
+            std::string b, p, w1, w2; in >> b >> p >> w1 >> w2;
+            general.bodyId = (b == "NONE") ? "" : b; general.propId = (p == "NONE") ? "" : p;
+            general.weapon1Id = (w1 == "NONE") ? "" : w1; general.weapon2Id = (w2 == "NONE") ? "" : w2;
+        }
+        else if (tag == "GENERAL_VARIANT")
+        {
+            std::string nm, b, p, w1, w2; in >> nm >> b >> p >> w1 >> w2;
+            for (char& c : nm) if (c == '_') c = ' ';
+            general.variants.push_back({ nm, b, p, w1, w2 });
+        }
+
         else if (tag == "STATE")
         {
             std::string code; int ownerInt = 0;

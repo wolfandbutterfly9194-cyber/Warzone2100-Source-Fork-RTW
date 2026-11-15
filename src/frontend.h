@@ -54,6 +54,7 @@ bool runMultiPlayerMenu();
 bool runTutorialMenu();
 void runContinue();
 void startTitleMenu();
+void usaOpenOptionsMenu();
 void startTutorialMenu();
 void startSinglePlayerMenu();
 void startMultiPlayerMenu();

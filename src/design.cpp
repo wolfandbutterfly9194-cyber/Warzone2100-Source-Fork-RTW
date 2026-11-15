@@ -60,8 +60,13 @@
 #include "intimage.h"
 #include "intdisplay.h"
 #include "design.h"
+#include "usa_campaign_state.h"
+#include "usa_metagame_bridge.h"
+#include "main.h"
+#include "frontend.h"
 #include "component.h"
 #include "main.h"
+#include "frontend.h"
 #include "display.h"
 #include "cmddroid.h"
 #include "mission.h"
@@ -671,10 +676,89 @@ bool intAddDesign(bool bShowCentreScreen)
 
 	/* Initialise the current design */
 	sDefaultDesignTemplate.droidType = DROID_ANY;
-	sCurrDesign = sDefaultDesignTemplate;
-	sCurrDesign.stored = false;
-	sstrcpy(aCurrName, _("New Vehicle"));
-	sCurrDesign.name = WzString::fromUtf8(aCurrName);
+sCurrDesign = sDefaultDesignTemplate;
+sCurrDesign.stored = false;
+if (bUsaGeneralDesignMode)
+{
+UsaCampaignState& camp = getUsaCampaignState();
+sstrcpy(aCurrName, "Dragon Command General");
+sCurrDesign.name = WzString::fromUtf8(aCurrName);
+
+for (UDWORD i = 1; i < asBodyStats.size(); ++i) { asBodyStats[i].designable = false; apCompLists[selectedPlayer][COMP_BODY][i] = UNAVAILABLE; }
+for (UDWORD i = 1; i < asPropulsionStats.size(); ++i) { asPropulsionStats[i].designable = false; apCompLists[selectedPlayer][COMP_PROPULSION][i] = UNAVAILABLE; }
+for (UDWORD i = 1; i < asWeaponStats.size(); ++i) { asWeaponStats[i].designable = false; apCompLists[selectedPlayer][COMP_WEAPON][i] = UNAVAILABLE; }
+
+auto findAndUnlockBody = [&](const std::string& id) -> BODY_STATS* {
+for (size_t i = 1; i < asBodyStats.size(); ++i) {
+if (_stricmp(asBodyStats[i].id.toUtf8().c_str(), id.c_str()) == 0) {
+asBodyStats[i].designable = true;
+apCompLists[selectedPlayer][COMP_BODY][i] = AVAILABLE;
+return &asBodyStats[i];
+}
+}
+return nullptr;
+};
+auto findAndUnlockProp = [&](const std::string& id) -> PROPULSION_STATS* {
+for (size_t i = 1; i < asPropulsionStats.size(); ++i) {
+if (_stricmp(asPropulsionStats[i].id.toUtf8().c_str(), id.c_str()) == 0) {
+asPropulsionStats[i].designable = true;
+apCompLists[selectedPlayer][COMP_PROPULSION][i] = AVAILABLE;
+return &asPropulsionStats[i];
+}
+}
+return nullptr;
+};
+auto findAndUnlockWeap = [&](const std::string& id) -> WEAPON_STATS* {
+for (size_t i = 1; i < asWeaponStats.size(); ++i) {
+if (_stricmp(asWeaponStats[i].id.toUtf8().c_str(), id.c_str()) == 0) {
+asWeaponStats[i].designable = true;
+apCompLists[selectedPlayer][COMP_WEAPON][i] = AVAILABLE;
+return &asWeaponStats[i];
+}
+}
+return nullptr;
+};
+
+const char* defBodies[] = { "Body14SUP" };
+const char* defProps[]  = { "wheeled01" };
+const char* defWeaps[]  = { "MG3Mk1", "Cannon2A-TMk1", "Rocket-Pod" };
+for (const char* id : defBodies) findAndUnlockBody(id);
+for (const char* id : defProps)  findAndUnlockProp(id);
+for (const char* id : defWeaps)  findAndUnlockWeap(id);
+if (!camp.general.variants.empty() && !camp.general.bodyId.empty()) { BODY_STATS* psBody = findAndUnlockBody("Body14SUP");
+PROPULSION_STATS* psProp = findAndUnlockProp("wheeled01");
+auto isAllowedStartingWeap = [](const std::string& id) {
+return _stricmp(id.c_str(), "MG3Mk1") == 0 || _stricmp(id.c_str(), "Cannon2A-TMk1") == 0 || _stricmp(id.c_str(), "Rocket-Pod") == 0;
+};
+if (!isAllowedStartingWeap(camp.general.weapon1Id)) camp.general.weapon1Id = "Cannon2A-TMk1";
+if (!isAllowedStartingWeap(camp.general.weapon2Id)) camp.general.weapon2Id = "Rocket-Pod";
+camp.general.propId = "wheeled01";
+camp.general.bodyId = "Body14SUP";
+WEAPON_STATS* psW1 = findAndUnlockWeap(camp.general.weapon1Id);
+WEAPON_STATS* psW2 = findAndUnlockWeap(camp.general.weapon2Id);
+
+if (psBody) setTemplateStat(&sCurrDesign, psBody);
+if (psProp) setTemplateStat(&sCurrDesign, psProp);
+sCurrDesign.numWeaps = 2;
+if (psW1) *(sCurrDesign.asWeaps) = psW1->index;
+if (psW2) *(sCurrDesign.asWeaps + 1) = psW2->index; }
+}
+else
+{
+for (size_t i = 1; i < asBodyStats.size(); ++i)
+{
+if (_stricmp(asBodyStats[i].id.toUtf8().c_str(), "Body14SUP") == 0)
+{
+asBodyStats[i].designable = false;
+if (selectedPlayer < MAX_PLAYERS && apCompLists[selectedPlayer][COMP_BODY] != nullptr)
+{
+apCompLists[selectedPlayer][COMP_BODY][i] = UNAVAILABLE;
+}
+}
+}
+sstrcpy(aCurrName, _("New Vehicle"));
+sCurrDesign.name = WzString::fromUtf8(aCurrName);
+}
 
 	/* Add the design templates form */
 	if (!intAddTemplateForm(nullptr))  // Was psCurrTemplate instead of NULL, but psCurrTemplate was always NULL. Deleted psCurrTemplate, but leaving this here, in case intAddTemplateForm(NULL) does something useful.
@@ -696,7 +780,28 @@ bool intAddDesign(bool bShowCentreScreen)
 		return false;
 	}
 
-	/* Add the part button form */
+if (bUsaGeneralDesignMode)
+{
+UsaCampaignState& camp = getUsaCampaignState();
+for (int g = 0; g < static_cast<int>(camp.general.upgrades.size()); ++g)
+{
+const auto& upg = camp.general.upgrades[g];
+W_BUTINIT gBut;
+gBut.formID = IDDES_FORM;
+gBut.id = IDDES_EXTRASYSSTART + g;
+gBut.x = 12;
+gBut.y = static_cast<short>(260 + g * 28);
+gBut.width = 230;
+gBut.height = 24;
+gBut.style = WBUT_PLAIN;
+static std::array<std::string, 6> gLabels;
+int cost = upg.baseCost + upg.level * 120;
+gLabels[g] = upg.label + " [" + std::to_string(upg.level) + "/5] (" + std::to_string(cost) + "P)";
+gBut.pText = gLabels[g].c_str();
+widgAddButton(psWScreen, &gBut);
+}
+}
+/* Add the part button form */
 	sFormInit.formID = IDDES_FORM;
 	sFormInit.id = IDDES_PARTFORM;
 	sFormInit.style = WFORM_PLAIN;
@@ -2974,6 +3079,16 @@ void intRemoveDesign()
 	widgDelete(psWScreen, IDDES_STATSFORM);
 
 	resetDesignPauseState();
+if (bUsaGeneralDesignMode)
+{
+UsaCampaignState& camp = getUsaCampaignState();
+if (sCurrDesign.getBodyStats()) camp.general.bodyId = sCurrDesign.getBodyStats()->id.toUtf8();
+if (sCurrDesign.getPropulsionStats()) camp.general.propId = sCurrDesign.getPropulsionStats()->id.toUtf8();
+if (sCurrDesign.numWeaps > 0 && sCurrDesign.getWeaponStats(0)) camp.general.weapon1Id = sCurrDesign.getWeaponStats(0)->id.toUtf8();
+if (sCurrDesign.numWeaps > 1 && sCurrDesign.getWeaponStats(1)) camp.general.weapon2Id = sCurrDesign.getWeaponStats(1)->id.toUtf8();
+camp.saveToPhysfs();
+bUsaExitDesignToMap = true;
+}
 }
 
 /* set flashing flag for button */
@@ -3041,7 +3156,7 @@ void intProcessDesign(UDWORD id)
 
 			if (bMultiPlayer)
 			{
-				widgHide(psWScreen, IDDES_STOREBUTTON);
+				if (usaOverworldDesignMode == UsaOverworldDesignMode::NONE) widgHide(psWScreen, IDDES_STOREBUTTON); else { widgReveal(psWScreen, IDDES_STOREBUTTON); widgSetButtonState(psWScreen, IDDES_STOREBUTTON, 0); updateStoreButton(false); }
 			}
 		}
 		else
@@ -3405,7 +3520,40 @@ void intProcessDesign(UDWORD id)
 				}
 				break;
 			}
-		case IDDES_STOREBUTTON:
+case IDDES_STOREBUTTON:
+if (usaOverworldDesignMode == UsaOverworldDesignMode::GENERAL_DESIGN)
+{
+UsaCampaignState& camp = getUsaCampaignState();
+std::string bId = sCurrDesign.getBodyStats() ? sCurrDesign.getBodyStats()->id.toUtf8() : "Body14SUP";
+std::string pId = sCurrDesign.getPropulsionStats() ? sCurrDesign.getPropulsionStats()->id.toUtf8() : "wheeled01";
+std::string w1 = (sCurrDesign.numWeaps > 0 && sCurrDesign.getWeaponStats(0)) ? sCurrDesign.getWeaponStats(0)->id.toUtf8() : "Cannon2A-TMk1";
+std::string w2 = (sCurrDesign.numWeaps > 1 && sCurrDesign.getWeaponStats(1)) ? sCurrDesign.getWeaponStats(1)->id.toUtf8() : w1;
+const char* boxTxt = widgGetString(psWScreen, IDDES_NAMEBOX);
+std::string vName = (boxTxt != nullptr && boxTxt != '\0') ? std::string(boxTxt) : sCurrDesign.name.toUtf8();
+if (vName.empty() || vName == "New Vehicle") vName = "Dragon Variant " + std::to_string(camp.general.variants.size() + 1);
+camp.general.bodyId = bId; camp.general.propId = pId; camp.general.weapon1Id = w1; camp.general.weapon2Id = w2;
+bool updated = false;
+for (auto& existing : camp.general.variants) { if (existing.name == vName) { existing = { vName, bId, pId, w1, w2 }; updated = true; break; } }
+if (!updated) camp.general.variants.push_back({ vName, bId, pId, w1, w2 });
+camp.saveToPhysfs();
+updateStoreButton(true);
+break;
+}
+else if (usaOverworldDesignMode == UsaOverworldDesignMode::CAMPAIGN_DESIGN)
+{
+UsaCampaignState& camp = getUsaCampaignState();
+if (sCurrDesign.getBodyStats() && sCurrDesign.getPropulsionStats() && sCurrDesign.numWeaps > 0 && sCurrDesign.getWeaponStats(0))
+{
+std::string bId = sCurrDesign.getBodyStats()->id.toUtf8();
+std::string pId = sCurrDesign.getPropulsionStats()->id.toUtf8();
+std::string wId = sCurrDesign.getWeaponStats(0)->id.toUtf8();
+std::string nm = sCurrDesign.name.toUtf8();
+camp.squad.push_back({ nm, bId, pId, wId, 150, 1 });
+camp.saveToPhysfs();
+}
+usaCloseOverworldDesigner();
+break;
+}
 			sCurrDesign.stored = !sCurrDesign.stored;	// Invert the current status
 			saveTemplate();
 			storeTemplates();
@@ -3795,7 +3943,7 @@ static bool saveTemplate()
 	{
 		if (bMultiPlayer)
 		{
-			widgHide(psWScreen, IDDES_STOREBUTTON);
+			if (usaOverworldDesignMode == UsaOverworldDesignMode::NONE) widgHide(psWScreen, IDDES_STOREBUTTON); else { widgReveal(psWScreen, IDDES_STOREBUTTON); widgSetButtonState(psWScreen, IDDES_STOREBUTTON, 0); updateStoreButton(false); }
 		}
 		return false;
 	}

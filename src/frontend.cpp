@@ -208,6 +208,8 @@ static void closeMissingVideosNotification()
 	cancelOrDismissNotificationsWithTag(VIDEO_TAG);
 }
 
+void usaOpenOptionsMenu() { changeTitleUI(std::make_shared<WzOptionsTitleUI>(wzTitleUICurrent)); }
+
 void startTitleMenu()
 {
 intRemoveReticule();
