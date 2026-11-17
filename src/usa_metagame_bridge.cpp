@@ -396,8 +396,9 @@ void usaProduceOpforUnits(bool isScav)
                 if (bIdx >= 0 && pIdx >= 0)
                 {
                     auto tmpl = std::make_unique<DROID_TEMPLATE>();
+    static int opforSeq = 0;
                     tmpl->name = WzString::fromUtf8(sd.name);
-                    tmpl->id = WzString::fromUtf8(sd.name);
+                    tmpl->id = WzString::fromUtf8("SimScav_" + std::to_string(++opforSeq));
                     for (int c = 0; c < DROID_MAXCOMP; ++c) tmpl->asParts[c] = 0;
                     tmpl->asParts[COMP_BODY] = bIdx;
                     tmpl->asParts[COMP_PROPULSION] = pIdx;
@@ -502,9 +503,51 @@ void dispatchOpforOrders(bool stageAtRally)
     }
 }
 
+    static bool simAttackActive = false;
+    static bool simArenaInitialized = false;
+    static int simSpawnSeq = 0;
+    void spawnSimScavBatch(bool vehicles)
+    {
+        static int opforSeq = 0;
+        struct SimDef { const char* name; const char* body; const char* prop; const char* weap; };
+        static const SimDef infDefs[] = {
+            { "Scav Raider", "B1BaBaPerson01", "BaBaLegs", "BaBaMG" },
+            { "Scav Rocketeer", "B1BaBaPerson01-Ultimate", "BaBaLegs", "BabaPitRocket" },
+            { "Scav Flamer", "B1BaBaPerson01", "BaBaLegs", "BabaFlame" }
+        };
+        static const SimDef vehDefs[] = {
+            { "Scav Trike", "B4body-sml-trike01", "BaBaProp", "BaBaMG" },
+            { "Scav Buggy", "B3body-sml-buggy01", "BaBaProp", "BaBaMG" },
+            { "Scav Rocket Buggy", "B3bodyRKbuggy01", "BaBaProp", "BabaPitRocket" },
+            { "Scav Cannon Truck", "ScavTruckBody", "BaBaProp", "BaBaCannon" }
+        };
+        int count = vehicles ? 6 : 10;
+        for (int i = 0; i < count; ++i)
+        {
+            const SimDef& sd = vehicles ? vehDefs[i % 4] : infDefs[i % 3];
+            int bIdx = getCompFromID(COMP_BODY, WzString::fromUtf8(sd.body));
+            int pIdx = getCompFromID(COMP_PROPULSION, WzString::fromUtf8(sd.prop));
+            int wIdx = getCompFromID(COMP_WEAPON, WzString::fromUtf8(sd.weap));
+            if (bIdx < 0 || pIdx < 0 || wIdx < 0) continue;
+            auto tmpl = std::make_unique<DROID_TEMPLATE>();
+            tmpl->name = WzString::fromUtf8(sd.name); tmpl->id = WzString::fromUtf8("SimScav_" + std::to_string(++opforSeq));
+            for (int k = 0; k < DROID_MAXCOMP; ++k) tmpl->asParts[k] = 0;
+            tmpl->asParts[COMP_BODY] = bIdx; tmpl->asParts[COMP_PROPULSION] = pIdx;
+            tmpl->numWeaps = 1; *(tmpl->asWeaps) = wIdx;
+            tmpl->droidType = vehicles ? DROID_WEAPON : DROID_PERSON;
+            DROID_TEMPLATE* pt = addTemplate(1, std::move(tmpl));
+            if (!pt) continue;
+            int anchorX = !apsDroidLists.at(0).empty() ? map_coord(apsDroidLists.at(0).front()->pos.x) : (mapWidth / 2);
+            int anchorY = !apsDroidLists.at(0).empty() ? map_coord(apsDroidLists.at(0).front()->pos.y) : ((mapHeight * 2) / 3);
+            int sx = std::max(6, std::min(mapWidth - 7, anchorX - 6 + (i % 6) * 2));
+            int sy = std::max(6, std::min(mapHeight - 7, anchorY - 14 - (i / 6) * 2));
+            DROID* nd = reallyBuildDroid(pt, Position(world_coord(sx) + TILE_UNITS / 2, world_coord(sy) + TILE_UNITS / 2, 0), 1, false);
+            if (nd) { addDroid(nd, apsDroidLists); orderDroid(nd, DORDER_HOLD, ModeImmediate); }
+        }
+    }
 void updateUsaInGameHud()
 {
-        if (bUsaSimulatorMode && psWScreen != nullptr) { if (gameTime < 500 && combatTimerStarted) { combatTimerStarted = false; inGameHudAttached = false; } bUsaSessionActive = true; }
+        if (bUsaSimulatorMode && psWScreen != nullptr) { if (gameTime < 1500 && simArenaInitialized) { simArenaInitialized = false; inGameHudAttached = false; simAttackActive = false; } bUsaSessionActive = true; }
     if (!bUsaSessionActive || psWScreen == nullptr)
     {
         return;
@@ -609,48 +652,10 @@ void updateUsaInGameHud()
 
     if (bUsaSimulatorMode)
     {
-        if (!combatTimerStarted)
-        {
-            usaApplyNativeBattleSetup();
-            combatTimerStarted = true;
+        if (!simArenaInitialized && gameTime >= 1500) { usaApplyNativeBattleSetup(); simArenaInitialized = true;
             opforTriggeredNow = false;
         }
-        static bool simAttackActive = false;
-        auto spawnSimScavBatch = [](bool vehicles) {
-            struct SimDef { const char* name; const char* body; const char* prop; const char* weap; bool person; };
-            static const SimDef infDefs[] = {
-                { "Scav Raider", "BaBaLegs", "BaBaLegs", "BabaMG", true },
-                { "Rocket Raider", "BaBaLegs", "BaBaLegs", "BabaRocket", true }
-            };
-            static const SimDef vehDefs[] = {
-                { "Scav Trike", "B1BaBaViper01", "BaBaProp", "BabaMG", false },
-                { "Scav Buggy", "B4body-sml-trike01", "BaBaProp", "BabaRocket", false },
-                { "Scav Cannon Jeep", "B3body-sml-buggy01", "BaBaProp", "Cannon1Mk1", false },
-                { "Scav Scorpion", "Body5REC", "tracked01", "Cannon2A-TMk1", false }
-            };
-            int count = vehicles ? 6 : 10;
-            int baseY = 8;
-            for (int i = 0; i < count; ++i)
-            {
-                const SimDef& sd = vehicles ? vehDefs[i % 4] : infDefs[i % 2];
-                int bIdx = getCompFromID(COMP_BODY, WzString::fromUtf8(sd.body));
-                int pIdx = getCompFromID(COMP_PROPULSION, WzString::fromUtf8(sd.prop));
-                int wIdx = getCompFromID(COMP_WEAPON, WzString::fromUtf8(sd.weap));
-                if (bIdx < 0 || pIdx < 0 || wIdx < 0) continue;
-                auto tmpl = std::make_unique<DROID_TEMPLATE>();
-                tmpl->name = WzString::fromUtf8(sd.name); tmpl->id = WzString::fromUtf8(sd.name);
-                for (int k = 0; k < DROID_MAXCOMP; ++k) tmpl->asParts[k] = 0;
-                tmpl->asParts[COMP_BODY] = bIdx; tmpl->asParts[COMP_PROPULSION] = pIdx;
-                tmpl->numWeaps = 1; *(tmpl->asWeaps) = wIdx;
-                tmpl->droidType = sd.person ? DROID_PERSON : DROID_WEAPON;
-                DROID_TEMPLATE* pt = addTemplate(1, std::move(tmpl));
-                if (!pt) continue;
-                int sx = std::max(6, std::min(mapWidth - 7, (mapWidth / 2) - 8 + (i % 8) * 2));
-                int sy = std::max(6, std::min(mapHeight - 7, baseY + (i / 8) * 2));
-                DROID* nd = reallyBuildDroid(pt, Position(world_coord(sx) + TILE_UNITS / 2, world_coord(sy) + TILE_UNITS / 2, 0), 1, false);
-                if (nd) { addDroid(nd, apsDroidLists); orderDroid(nd, DORDER_HOLD, ModeImmediate); }
-            }
-        };
+
         if (!inGameHudAttached)
         {
             int bw = 162, bh = 28, gap = 8;
@@ -660,18 +665,18 @@ void updateUsaInGameHud()
             makeStyledButton(0, ID_USA_INGAME_SAVEEXIT + 2, sx + (bw + gap) * 2, 10, bw, bh, "[ LAUNCH ATTACK ]", false);
             makeStyledButton(0, ID_USA_INGAME_SAVEEXIT + 3, sx + (bw + gap) * 3, 10, bw, bh, "[ STOP & KILL SCAVS ]", false);
             if (WIDGET* b0 = widgGetFromID(psWScreen, ID_USA_INGAME_SAVEEXIT))
-                static_cast<W_BUTTON*>(b0)->addOnClickHandler([&](W_BUTTON&) { spawnSimScavBatch(false); });
+                static_cast<W_BUTTON*>(b0)->addOnClickHandler([](W_BUTTON&) { spawnSimScavBatch(false); });
             if (WIDGET* b1 = widgGetFromID(psWScreen, ID_USA_INGAME_SAVEEXIT + 1))
-                static_cast<W_BUTTON*>(b1)->addOnClickHandler([&](W_BUTTON&) { spawnSimScavBatch(true); });
+                static_cast<W_BUTTON*>(b1)->addOnClickHandler([](W_BUTTON&) { spawnSimScavBatch(true); });
             if (WIDGET* b2 = widgGetFromID(psWScreen, ID_USA_INGAME_SAVEEXIT + 2))
-                static_cast<W_BUTTON*>(b2)->addOnClickHandler([&](W_BUTTON&) {
+                static_cast<W_BUTTON*>(b2)->addOnClickHandler([](W_BUTTON&) {
                     simAttackActive = true;
                     for (DROID* d : apsDroidLists.at(1))
                         if (d && !d->died && !apsDroidLists.at(0).empty())
                             orderDroidObj(d, DORDER_ATTACK, apsDroidLists.at(0).front(), ModeImmediate);
                 });
             if (WIDGET* b3 = widgGetFromID(psWScreen, ID_USA_INGAME_SAVEEXIT + 3))
-                static_cast<W_BUTTON*>(b3)->addOnClickHandler([&](W_BUTTON&) {
+                static_cast<W_BUTTON*>(b3)->addOnClickHandler([](W_BUTTON&) {
                     simAttackActive = false;
                     std::vector<DROID*> killList;
                     for (DROID* d : apsDroidLists.at(1)) if (d && !d->died) killList.push_back(d);

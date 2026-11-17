@@ -239,7 +239,7 @@ bool runTitleMenu()
 		bUsaPrebattle = true;
 	}
 
-    if (usaIsUnitEditorOpen()) { if (mousePressed(MOUSE_LMB)) { usaHandleUnitEditorClick(mouseX(), mouseY(), false); } else if (mousePressed(MOUSE_RMB)) { usaHandleUnitEditorClick(mouseX(), mouseY(), true); } usaUpdateAndDrawUnitEditor(); return true; }
+    if (bUsaSimulatorMode) { bUsaSimulatorMode = false; } if (usaIsUnitEditorOpen()) { if (mousePressed(MOUSE_LMB)) { usaHandleUnitEditorClick(mouseX(), mouseY(), false); } else if (mousePressed(MOUSE_RMB)) { usaHandleUnitEditorClick(mouseX(), mouseY(), true); } usaUpdateAndDrawUnitEditor(); return true; }
 	if (bUsaPrebattle)
 	{
 		runUsaPrebattleTick();

@@ -1,3 +1,4 @@
+extern bool bUsaSimulatorMode;
 /*
 	This file is part of Warzone 2100.
 	Copyright (C) 1999-2004  Eidos Interactive
@@ -521,7 +522,7 @@ void loadMultiScripts()
 		loadExtra = true;
 	}
 
-	if (bUsaStripVanillaLobby) { for (unsigned p = 1; p < game.maxPlayers; ++p) { if (NetPlay.players[p].difficulty == AIDifficulty::DISABLED) { NetPlay.players[p].ai = 0; NetPlay.players[p].difficulty = AIDifficulty::MEDIUM; } } } if (getHostLaunch() == HostLaunch::Skirmish)
+	if (bUsaSimulatorMode) { sstrcpy(game.map, "Sk-Rush"); game.maxPlayers = 2; game.base = CAMP_CLEAN; game.scavengers = false; for (unsigned p = 1; p < MAX_PLAYERS; ++p) { NetPlay.players[p].ai = AI_CLOSED; NetPlay.players[p].difficulty = AIDifficulty::DISABLED; } } else if (bUsaStripVanillaLobby) { for (unsigned p = 1; p < game.maxPlayers; ++p) { if (NetPlay.players[p].difficulty == AIDifficulty::DISABLED) { NetPlay.players[p].ai = 0; NetPlay.players[p].difficulty = AIDifficulty::MEDIUM; } } } if (getHostLaunch() == HostLaunch::Skirmish)
 	{
 		ininame = "tests/" + WzString::fromUtf8(wz_skirmish_test());
 		path = "tests/";
@@ -5194,7 +5195,7 @@ static bool loadMapChallengeAndPlayerSettings(bool forceLoadPlayers = false)
 
 	WzString ininame = challengeActive ? sRequestResult : aFileName;
 	bool warnIfMissing = false;
-	if (bUsaStripVanillaLobby) { for (unsigned p = 1; p < game.maxPlayers; ++p) { if (NetPlay.players[p].difficulty == AIDifficulty::DISABLED) { NetPlay.players[p].ai = 0; NetPlay.players[p].difficulty = AIDifficulty::MEDIUM; } } } if (getHostLaunch() == HostLaunch::Skirmish)
+	if (bUsaSimulatorMode) { sstrcpy(game.map, "Sk-Rush"); game.maxPlayers = 2; game.base = CAMP_CLEAN; game.scavengers = false; for (unsigned p = 1; p < MAX_PLAYERS; ++p) { NetPlay.players[p].ai = AI_CLOSED; NetPlay.players[p].difficulty = AIDifficulty::DISABLED; } } else if (bUsaStripVanillaLobby) { for (unsigned p = 1; p < game.maxPlayers; ++p) { if (NetPlay.players[p].difficulty == AIDifficulty::DISABLED) { NetPlay.players[p].ai = 0; NetPlay.players[p].difficulty = AIDifficulty::MEDIUM; } } } if (getHostLaunch() == HostLaunch::Skirmish)
 	{
 		ininame = "tests/" + WzString::fromUtf8(wz_skirmish_test());
 		warnIfMissing = true;
@@ -6966,8 +6967,8 @@ void WzMultiplayerOptionsTitleUI::start()
 		{
 			sendReadyRequest(selectedPlayer, true);
 		}
-                if (bUsaStripVanillaLobby) { for (unsigned p = 1; p < game.maxPlayers; ++p) { NetPlay.players[p].ai = 0; NetPlay.players[p].difficulty = AIDifficulty::MEDIUM; } }
-		if (bUsaStripVanillaLobby) { for (unsigned p = 1; p < game.maxPlayers; ++p) { if (NetPlay.players[p].difficulty == AIDifficulty::DISABLED) { NetPlay.players[p].ai = 0; NetPlay.players[p].difficulty = AIDifficulty::MEDIUM; } } } if (getHostLaunch() == HostLaunch::Skirmish)
+                if (bUsaSimulatorMode) { sstrcpy(game.map, "Sk-Rush"); game.maxPlayers = 2; game.base = CAMP_CLEAN; game.scavengers = false; for (unsigned p = 1; p < MAX_PLAYERS; ++p) { NetPlay.players[p].ai = AI_CLOSED; NetPlay.players[p].difficulty = AIDifficulty::DISABLED; } } else if (bUsaSimulatorMode) { for (unsigned p = 1; p < MAX_PLAYERS; ++p) { NetPlay.players[p].ai = AI_CLOSED; NetPlay.players[p].difficulty = AIDifficulty::DISABLED; } } else if (bUsaStripVanillaLobby) { for (unsigned p = 1; p < game.maxPlayers; ++p) { NetPlay.players[p].ai = 0; NetPlay.players[p].difficulty = AIDifficulty::MEDIUM; } }
+		if (bUsaSimulatorMode) { sstrcpy(game.map, "Sk-Rush"); game.maxPlayers = 2; game.base = CAMP_CLEAN; game.scavengers = false; for (unsigned p = 1; p < MAX_PLAYERS; ++p) { NetPlay.players[p].ai = AI_CLOSED; NetPlay.players[p].difficulty = AIDifficulty::DISABLED; } } else if (bUsaStripVanillaLobby) { for (unsigned p = 1; p < game.maxPlayers; ++p) { if (NetPlay.players[p].difficulty == AIDifficulty::DISABLED) { NetPlay.players[p].ai = 0; NetPlay.players[p].difficulty = AIDifficulty::MEDIUM; } } } if (getHostLaunch() == HostLaunch::Skirmish)
 		{
 			startMultiplayerGame();
 			// reset flag in case people dropped/quit on join screen

@@ -453,6 +453,9 @@ static bool displayCompObj(const DROID *psDroid, bool bButton, const glm::mat4& 
 
 	/* get propulsion stats */
 	psPropStats = psDroid->getPropulsionStats();
+    const SuperHeavyBlueprint* psShBp = usaFindSuperHeavyByName(std::string(psDroid->aName));
+    glm::mat4 propMat = modifiedModelMatrix;
+    if (psShBp) { propMat = propMat * glm::translate(glm::vec3(0.f, psShBp->propOffsetY, psShBp->propOffsetZ)) * glm::scale(glm::vec3(psShBp->propScaleX, psShBp->propScaleY, psShBp->propScaleZ)); }
 	ASSERT_OR_RETURN(didDrawSomething, psPropStats != nullptr, "invalid propulsion stats pointer");
 
 	//set pieflag for button object or ingame object
@@ -496,13 +499,13 @@ static bool displayCompObj(const DROID *psDroid, bool bButton, const glm::mat4& 
 	const iIMDBaseShape *psShapeProp = (leftFirst ? getLeftPropulsionIMD(psDroid) : getRightPropulsionIMD(psDroid));
 	if (psShapeProp)
 	{
-		if (pie_Draw3DShape(psShapeProp->displayModel(), 0, colour, brightness, pieFlag, iPieData, modifiedModelMatrix, viewMatrix, -(psDroid->heightAboveMap)))
+		if (pie_Draw3DShape(psShapeProp->displayModel(), 0, colour, brightness, pieFlag, iPieData, propMat, viewMatrix, -(psDroid->heightAboveMap)))
 		{
 			didDrawSomething = true;
 		}
 		if (!bButton && psDroid->shieldPoints > 0)
 		{
-			if (pie_Draw3DShape(psShapeProp->displayModel(), 0, colour, brightness, shieldPieFlag, iShieldPieData, modifiedModelMatrix, viewMatrix, -(psDroid->heightAboveMap)))
+			if (pie_Draw3DShape(psShapeProp->displayModel(), 0, colour, brightness, shieldPieFlag, iShieldPieData, propMat, viewMatrix, -(psDroid->heightAboveMap)))
 			{
 				didDrawSomething = true;
 			}
@@ -522,7 +525,7 @@ static bool displayCompObj(const DROID *psDroid, bool bButton, const glm::mat4& 
 	}
 
 	/* Get the body graphic now*/
-	const SuperHeavyBlueprint* psShBp = usaFindSuperHeavyByName(std::string(psDroid->aName));
+    // psShBp declared above propulsion
 	glm::mat4 bodyMat = modifiedModelMatrix;
 	if (psShBp) { bodyMat = bodyMat * glm::translate(glm::vec3(0.f, psShBp->bodyOffsetY, psShBp->bodyOffsetZ)) * glm::scale(glm::vec3(psShBp->bodyScaleX, psShBp->bodyScaleY, psShBp->bodyScaleZ)); }
 	const iIMDBaseShape *psBaseShapeBody = BODY_IMD(psDroid, psDroid->player);
@@ -562,7 +565,7 @@ static bool displayCompObj(const DROID *psDroid, bool bButton, const glm::mat4& 
 	if (!bButton && psMoveAnim && psDroid->sMove.Status != MOVEINACTIVE)
 	{
 		const iIMDShape *displayModel = psMoveAnim->displayModel();
-		if (pie_Draw3DShape(displayModel, getModularScaledGraphicsTime(displayModel->animInterval, displayModel->numFrames), colour, brightness, pie_ADDITIVE, 200, modifiedModelMatrix, viewMatrix, -(psDroid->heightAboveMap)))
+		if (pie_Draw3DShape(displayModel, getModularScaledGraphicsTime(displayModel->animInterval, displayModel->numFrames), colour, brightness, pie_ADDITIVE, 200, propMat, viewMatrix, -(psDroid->heightAboveMap)))
 		{
 			didDrawSomething = true;
 		}
@@ -570,7 +573,7 @@ static bool displayCompObj(const DROID *psDroid, bool bButton, const glm::mat4& 
 	else if (!bButton && psStillAnim) // standing still
 	{
 		const iIMDShape *displayModel = psStillAnim->displayModel();
-		if (pie_Draw3DShape(displayModel, getModularScaledGraphicsTime(displayModel->animInterval, displayModel->numFrames), colour, brightness, 0, 0, modifiedModelMatrix, viewMatrix, -(psDroid->heightAboveMap)))
+		if (pie_Draw3DShape(displayModel, getModularScaledGraphicsTime(displayModel->animInterval, displayModel->numFrames), colour, brightness, 0, 0, propMat, viewMatrix, -(psDroid->heightAboveMap)))
 		{
 			didDrawSomething = true;
 		}
@@ -621,106 +624,45 @@ static bool displayCompObj(const DROID *psDroid, bool bButton, const glm::mat4& 
 			Allegedly - all droids will have a mount graphic so this shouldn't
 			fall on it's arse......*/
 			/* Double check that the weapon droid actually has any */
-			for (i = 0; i < psDroid->numWeaps; i++)
-			{
-				if ((psDroid->asWeaps[i].nStat > 0 || psDroid->droidType == DROID_DEFAULT)
-				    && !psShapeBody->connectors.empty())
-				{
-					Rotation rot = getInterpolatedWeaponRotation(psDroid, i, graphicsTime);
+                    if (psShBp && psShBp->numTurrets > 0)
+                    {
+                        for (int t = 0; t < std::min(4, psShBp->numTurrets); ++t)
+                        {
+                            int wStat = getCompFromID(COMP_WEAPON, WzString::fromUtf8(psShBp->turrets[t].weaponId));
+                            if (wStat < 0) continue;
+                            int weapSlot = std::min<int>(t, std::max<int>(0, psDroid->numWeaps - 1));
+                            Rotation rot = (psDroid->numWeaps > 0) ? getInterpolatedWeaponRotation(psDroid, weapSlot, graphicsTime) : Rotation(psDroid->rot.direction, 0, 0);
+                            glm::mat4 tMat = modifiedModelMatrix * glm::translate(glm::vec3(psShBp->turrets[t].snapX, psShBp->bodyOffsetY + psShBp->turrets[t].snapY, psShBp->bodyOffsetZ + psShBp->turrets[t].snapZ)) * glm::rotate(UNDEG(-rot.direction), glm::vec3(0.f, 1.f, 0.f)) * glm::scale(glm::vec3(psShBp->turrets[t].scale));
+                            float hT = psDroid->heightAboveMap + psShBp->bodyOffsetY + psShBp->turrets[t].snapY;
+                            int rec = (psDroid->numWeaps > 0) ? getRecoil(psDroid->asWeaps[weapSlot]) : 0;
+                            tMat *= glm::translate(glm::vec3(0.f, 0.f, rec / 3.f));
+                            const iIMDShape* shM = asWeaponStats[wStat].pMountGraphic ? asWeaponStats[wStat].pMountGraphic->displayModel() : nullptr;
+                            if (shM) { if (pie_Draw3DShape(shM, 0, colour, brightness, pieFlag, iPieData, tMat, viewMatrix, -hT)) didDrawSomething = true; if (!shM->connectors.empty()) { tMat *= glm::translate(glm::vec3(shM->connectors[0].xzy())); hT += shM->connectors[0].z; } }
+                            tMat *= glm::translate(glm::vec3(0.f, 0.f, (float)rec)) * glm::rotate(UNDEG(rot.pitch), glm::vec3(1.f, 0.f, 0.f));
+                            const iIMDShape* shG = asWeaponStats[wStat].pIMD ? asWeaponStats[wStat].pIMD->displayModel() : nullptr;
+                            if (shG && pie_Draw3DShape(shG, 0, colour, brightness, pieFlag, iPieData, tMat, viewMatrix, -hT)) didDrawSomething = true;
+                        }
+                        break;
+                    }
+                    for (i = 0; i < std::min<int>(psDroid->numWeaps, MAX_WEAPONS); i++)
+                    {
+                        if (psDroid->asWeaps[i].nStat > 0 && !psShapeBody->connectors.empty())
+                        {
+                            Rotation rot = getInterpolatedWeaponRotation(psDroid, i, graphicsTime);
+                            glm::mat4 localModelMatrix = modifiedModelMatrix;
+                            float localHeightAboveTerrain = psDroid->heightAboveMap;
+                            size_t bodyConnectorIndex = (iConnector < VTOL_CONNECTOR_START) ? i : iConnector + i;
+                            if (bodyConnectorIndex < psShapeBody->connectors.size()) { localModelMatrix *= glm::translate(glm::vec3(psShapeBody->connectors[bodyConnectorIndex].xzy())); localHeightAboveTerrain += psShapeBody->connectors[bodyConnectorIndex].z; }
+                            localModelMatrix *= glm::rotate(UNDEG(-rot.direction), glm::vec3(0.f, 1.f, 0.f));
+                            const iIMDShape* psShape = WEAPON_MOUNT_IMD(psDroid, i) ? WEAPON_MOUNT_IMD(psDroid, i)->displayModel() : nullptr;
+                            if (psShape) { if (pie_Draw3DShape(psShape, 0, colour, brightness, pieFlag, iPieData, localModelMatrix, viewMatrix, -localHeightAboveTerrain)) didDrawSomething = true; if (!psShape->connectors.empty()) { localModelMatrix *= glm::translate(glm::vec3(psShape->connectors[0].xzy())); localHeightAboveTerrain += psShape->connectors[0].z; } }
+                            localModelMatrix *= glm::rotate(UNDEG(rot.pitch), glm::vec3(1.f, 0.f, 0.f));
+                            const iIMDShape* psW = WEAPON_IMD(psDroid, i) ? WEAPON_IMD(psDroid, i)->displayModel() : nullptr;
+                            if (psW && pie_Draw3DShape(psW, 0, colour, brightness, pieFlag, iPieData, localModelMatrix, viewMatrix, -localHeightAboveTerrain)) didDrawSomething = true;
+                        }
+                    }
+                    break;
 
-					glm::mat4 localModelMatrix = modifiedModelMatrix;
-					float localHeightAboveTerrain = psDroid->heightAboveMap;
-
-					//to skip number of VTOL_CONNECTOR_START ground unit connectors
-					size_t bodyConnectorIndex = (iConnector < VTOL_CONNECTOR_START) ? i : iConnector + i;
-					if (bodyConnectorIndex < psShapeBody->connectors.size())
-					{
-						localModelMatrix *= glm::translate(glm::vec3(psShapeBody->connectors[bodyConnectorIndex].xzy()));
-						localHeightAboveTerrain += psShapeBody->connectors[bodyConnectorIndex].z;
-					}
-					else
-					{
-						debug(LOG_INFO, "Model lacks sufficient connectors?: %s", psShapeBody->modelName.toUtf8().c_str());
-					}
-					localModelMatrix *= glm::rotate(UNDEG(-rot.direction), glm::vec3(0.f, 1.f, 0.f));
-
-					/* vtol weapons inverted */
-					if (iConnector >= VTOL_CONNECTOR_START)
-					{
-						//this might affect gun rotation
-						localModelMatrix *= glm::rotate(UNDEG(65536 / 2), glm::vec3(0.f, 0.f, 1.f));
-					}
-
-					/* Get the mount graphic */
-					const iIMDBaseShape *psBaseShape = WEAPON_MOUNT_IMD(psDroid, i);
-					const iIMDShape *psShape = (psBaseShape) ? psBaseShape->displayModel() : nullptr;
-
-					int recoilValue = getRecoil(psDroid->asWeaps[i]);
-					localModelMatrix *= glm::translate(glm::vec3(0.f, 0.f, recoilValue / 3.f));
-
-					/* Draw it */
-					if (psShape)
-					{
-						if (pie_Draw3DShape(psShape, 0, colour, brightness, pieFlag, iPieData, localModelMatrix, viewMatrix, -localHeightAboveTerrain))
-						{
-							didDrawSomething = true;
-						}
-						if (!bButton && psDroid->shieldPoints > 0)
-						{
-							if (pie_Draw3DShape(psShape, 0, colour, brightness, shieldPieFlag, iShieldPieData, localModelMatrix, viewMatrix, -localHeightAboveTerrain))
-							{
-								didDrawSomething = true;
-							}
-						}
-					}
-					localModelMatrix *= glm::translate(glm::vec3(0, 0, recoilValue));
-
-					/* translate for weapon mount point */
-					if (psShape && !psShape->connectors.empty())
-					{
-						localModelMatrix *= glm::translate(glm::vec3(psShape->connectors[0].xzy()));
-						localHeightAboveTerrain += psShape->connectors[0].z;
-					}
-
-					/* vtol weapons inverted */
-					if (iConnector >= VTOL_CONNECTOR_START)
-					{
-						//pitch the barrel down
-						localModelMatrix *= glm::rotate(UNDEG(-rot.pitch), glm::vec3(1.f, 0.f, 0.f));
-					}
-					else
-					{
-						//pitch the barrel up
-						localModelMatrix *= glm::rotate(UNDEG(rot.pitch), glm::vec3(1.f, 0.f, 0.f));
-					}
-
-					/* Get the weapon (gun?) graphic */
-					psBaseShape = WEAPON_IMD(psDroid, i);
-					psShape = (psBaseShape) ? psBaseShape->displayModel() : nullptr;
-
-					// We have a weapon so we draw it and a muzzle flash from weapon connector
-					if (psShape)
-					{
-						if (pie_Draw3DShape(psShape, 0, colour, brightness, pieFlag, iPieData, localModelMatrix, viewMatrix, -localHeightAboveTerrain))
-						{
-							didDrawSomething = true;
-						}
-						if (!bButton && psDroid->shieldPoints > 0)
-						{
-							if (pie_Draw3DShape(psShape, 0, colour, brightness, shieldPieFlag, iShieldPieData, localModelMatrix, viewMatrix, -localHeightAboveTerrain))
-							{
-								didDrawSomething = true;
-							}
-						}
-						auto flashBaseModel = MUZZLE_FLASH_PIE(psDroid, i);
-						const iIMDShape *pMuzzleFlash = (flashBaseModel) ? flashBaseModel->displayModel() : nullptr;
-						drawMuzzleFlash(psDroid->asWeaps[i], psShape, pMuzzleFlash, brightness, pieFlag, iPieData, localModelMatrix, viewMatrix, localHeightAboveTerrain);
-					}
-				}
-			}
-			break;
-
-		case DROID_SENSOR:
 		case DROID_CONSTRUCT:
 		case DROID_CYBORG_CONSTRUCT:
 		case DROID_ECM:
@@ -862,13 +804,13 @@ static bool displayCompObj(const DROID *psDroid, bool bButton, const glm::mat4& 
 	psShapeProp = (leftFirst ? getRightPropulsionIMD(psDroid) : getLeftPropulsionIMD(psDroid));
 	if (psShapeProp)
 	{
-		if (pie_Draw3DShape(psShapeProp->displayModel(), 0, colour, brightness, pieFlag, iPieData, modifiedModelMatrix, viewMatrix, -(psDroid->heightAboveMap)))
+		if (pie_Draw3DShape(psShapeProp->displayModel(), 0, colour, brightness, pieFlag, iPieData, propMat, viewMatrix, -(psDroid->heightAboveMap)))
 		{
 			didDrawSomething = true;
 		}
 		if (!bButton && psDroid->shieldPoints > 0)
 		{
-			if (pie_Draw3DShape(psShapeProp->displayModel(), 0, colour, brightness, shieldPieFlag, iShieldPieData, modifiedModelMatrix, viewMatrix, -(psDroid->heightAboveMap)))
+			if (pie_Draw3DShape(psShapeProp->displayModel(), 0, colour, brightness, shieldPieFlag, iShieldPieData, propMat, viewMatrix, -(psDroid->heightAboveMap)))
 			{
 				didDrawSomething = true;
 			}

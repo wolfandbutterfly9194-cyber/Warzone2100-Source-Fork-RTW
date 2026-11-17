@@ -1,3 +1,4 @@
+#include "display.h"
 #include "usa_unit_editor.h"
 #include "usa_battle_setup.h"
 #include "usa_scav_gen.h"
@@ -155,6 +156,35 @@ namespace
 }
 void usaApplyNativeBattleSetup()
 {
+    if (bUsaSimulatorMode)
+    {
+        std::vector<STRUCTURE*> rmS; for (int p = 0; p < 2; ++p) for (STRUCTURE* s : apsStructLists.at(p)) if (s && !s->died) rmS.push_back(s); for (STRUCTURE* s : rmS) removeStruct(s, true);
+        std::vector<DROID*> rmD; for (int p = 0; p < MAX_PLAYERS; ++p) for (DROID* d : apsDroidLists.at(p)) if (d && !d->died) rmD.push_back(d); for (DROID* d : rmD) vanishDroid(d);
+        setPower(0, 50000);
+        int lzX = mapWidth / 2, lzY = std::min(mapHeight - 10, (mapHeight * 2) / 3);
+        for (int r = 0; r < 12; ++r) { if (!fpathBlockingTile(lzX, lzY + r, PROPULSION_TYPE_TRACKED) && !TileHasStructure(mapTile(lzX, lzY + r))) { lzY += r; break; } if (!fpathBlockingTile(lzX, lzY - r, PROPULSION_TYPE_TRACKED) && !TileHasStructure(mapTile(lzX, lzY - r))) { lzY -= r; break; } }
+        usaBeachheadLzX = lzX; usaBeachheadLzY = lzY;
+        const SuperHeavyBlueprint* bp = usaFindSuperHeavyByName(usaSimulatorClassName);
+        if (!bp && !usaGetSuperHeavyBlueprints().empty()) bp = &usaGetSuperHeavyBlueprints().front();
+        if (bp)
+        {
+            int bIdx = getCompFromID(COMP_BODY, WzString::fromUtf8(bp->bodyId));
+            int pIdx = getCompFromID(COMP_PROPULSION, WzString::fromUtf8(bp->propId));
+            if (bIdx >= 0 && pIdx >= 0)
+            {
+                auto tmpl = std::make_unique<DROID_TEMPLATE>();
+                tmpl->name = WzString::fromUtf8(bp->name);
+                tmpl->id = WzString::fromUtf8("SimActive_" + std::to_string(gameTime));
+                for (int k = 0; k < DROID_MAXCOMP; ++k) tmpl->asParts[k] = 0;
+                tmpl->asParts[COMP_BODY] = bIdx; tmpl->asParts[COMP_PROPULSION] = pIdx;
+                int wc = 0; for (int t = 0; t < std::min<int>(MAX_WEAPONS, bp->numTurrets); ++t) { int wi = getCompFromID(COMP_WEAPON, WzString::fromUtf8(bp->turrets[t].weaponId)); if (wi >= 0) { *(tmpl->asWeaps + wc) = wi; wc++; } }
+                tmpl->numWeaps = wc; tmpl->droidType = DROID_WEAPON;
+                DROID_TEMPLATE* pt = addTemplate(0, std::move(tmpl));
+                if (pt) { DROID* sh = reallyBuildDroid(pt, Position(world_coord(lzX) + TILE_UNITS / 2, world_coord(lzY) + TILE_UNITS / 2, 0), 0, false); if (sh) { addDroid(sh, apsDroidLists); sh->selected = true; } }
+            }
+        }
+        return;
+    }
     UsaCampaignState& camp = getUsaCampaignState();
     if (camp.activeTargetIndex < 0 || camp.activeTargetIndex >= static_cast<int>(camp.states.size())) return;
     Territory& target = camp.states[camp.activeTargetIndex];
