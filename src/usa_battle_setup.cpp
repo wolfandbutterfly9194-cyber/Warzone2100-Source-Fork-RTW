@@ -1,10 +1,13 @@
 #include "display.h"
+#include "display3d.h"
 #include "usa_unit_editor.h"
 #include "usa_battle_setup.h"
 #include "usa_scav_gen.h"
 #include "usa_campaign_state.h"
 #include "lib/framework/frame.h"
 #include "droid.h"
+#include "display.h"
+#include "display3d.h"
 #include "feature.h"
 #include "objmem.h"
 #include "order.h"
@@ -159,9 +162,9 @@ void usaApplyNativeBattleSetup()
     if (bUsaSimulatorMode)
     {
         std::vector<STRUCTURE*> rmS; for (int p = 0; p < 2; ++p) for (STRUCTURE* s : apsStructLists.at(p)) if (s && !s->died) rmS.push_back(s); for (STRUCTURE* s : rmS) removeStruct(s, true);
-        std::vector<DROID*> rmD; for (int p = 0; p < MAX_PLAYERS; ++p) for (DROID* d : apsDroidLists.at(p)) if (d && !d->died) rmD.push_back(d); for (DROID* d : rmD) vanishDroid(d);
+        int lzX = mapWidth / 2, lzY = std::min(mapHeight - 10, (mapHeight * 2) / 3); if (!apsDroidLists.at(0).empty() && apsDroidLists.at(0).front()) { lzX = map_coord(apsDroidLists.at(0).front()->pos.x); lzY = map_coord(apsDroidLists.at(0).front()->pos.y); } std::vector<DROID*> rmD; for (int p = 0; p < MAX_PLAYERS; ++p) for (DROID* d : apsDroidLists.at(p)) if (d && !d->died) rmD.push_back(d); for (DROID* d : rmD) vanishDroid(d);
         setPower(0, 50000);
-        int lzX = mapWidth / 2, lzY = std::min(mapHeight - 10, (mapHeight * 2) / 3);
+        
         for (int r = 0; r < 12; ++r) { if (!fpathBlockingTile(lzX, lzY + r, PROPULSION_TYPE_TRACKED) && !TileHasStructure(mapTile(lzX, lzY + r))) { lzY += r; break; } if (!fpathBlockingTile(lzX, lzY - r, PROPULSION_TYPE_TRACKED) && !TileHasStructure(mapTile(lzX, lzY - r))) { lzY -= r; break; } }
         usaBeachheadLzX = lzX; usaBeachheadLzY = lzY;
         const SuperHeavyBlueprint* bp = usaFindSuperHeavyByName(usaSimulatorClassName);

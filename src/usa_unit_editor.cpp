@@ -1,3 +1,13 @@
+#include <chrono>
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
 #include "usa_unit_editor.h"
 #include "usa_campaign_state.h"
 #include "lib/framework/frame.h"
@@ -38,7 +48,7 @@ namespace
     void pushUndoState() { undoStack.push_back(activeDesign); if (undoStack.size() > 40) undoStack.erase(undoStack.begin()); redoStack.clear(); }
     void doUndo() { if (undoStack.empty()) { statusBanner = "NOTHING TO UNDO"; return; } redoStack.push_back(activeDesign); activeDesign = undoStack.back(); undoStack.pop_back(); statusBanner = "UNDID LAST ACTION"; }
     void doRedo() { if (redoStack.empty()) { statusBanner = "NOTHING TO REDO"; return; } undoStack.push_back(activeDesign); activeDesign = redoStack.back(); redoStack.pop_back(); statusBanner = "REDID ACTION"; }
-    int activeTurretSlot = 0, pickerMode = 0, lastDragX = 0, lastDragY = 0;
+    int activeTurretSlot = 0, pickerMode = 0, lastDragX = 0, lastDragY = 0, deleteConfirmIdx = -1;
     float previewYaw = 35.0f, previewPitch = -22.0f, previewZoom = 1.0f;
     struct ButtonBox { int id, x, y, w, h; }; std::vector<ButtonBox> clickBoxes;
     const char* kBodies[] = { "Body12SUP", "Body14SUP", "Body11ABT", "Body9REC", "Body10MBT", "Body6SUPP", "Body7ABT", "Body5REC", "Body4ABT", "Body1REC" };
@@ -174,9 +184,46 @@ void usaUpdateAndDrawUnitEditor()
     pie_UniTransBoxFill(0, 116, 338, sh - 28, pal_RGBA(6, 10, 18, 250)); pie_UniTransBoxFill(sw - 338, 116, sw, sh - 28, pal_RGBA(6, 10, 18, 250));
     iV_Box(12, 12, sw - 12, sh - 12, pal_RGBA(65, 165, 255, 255)); SuperHeavyBlueprint& u = activeDesign;
     if (!renamingClass && (keyDown(KEY_LCTRL) || keyDown(KEY_RCTRL))) { if (keyPressed(KEY_Z)) doUndo(); else if (keyPressed(KEY_Y)) doRedo(); }
-    if (renamingClass) {
-        for (int k = 32; k <= 126; ++k) if (keyPressed(static_cast<KEY_CODE>(k)) && u.name.size() < 24) { char ch = static_cast<char>(k); if (!keyDown(KEY_LSHIFT) && !keyDown(KEY_RSHIFT) && ch >= 'A' && ch <= 'Z') ch = static_cast<char>(ch + 32); u.name.push_back(ch); }
-        if (keyPressed(KEY_BACKSPACE) && !u.name.empty()) u.name.pop_back();
+    if (renamingClass)
+    {
+        bool shiftHeld = keyDown(KEY_LSHIFT) || keyDown(KEY_RSHIFT);
+#ifdef _WIN32
+        if ((GetAsyncKeyState(VK_SHIFT) & 0x8000) || (GetKeyState(VK_CAPITAL) & 0x0001)) shiftHeld = true;
+#endif
+        for (int k = 32; k <= 126; ++k)
+        {
+            if (keyPressed(static_cast<KEY_CODE>(k)) && u.name.size() < 24)
+            {
+                char ch = static_cast<char>(k);
+                if (ch >= 'a' && ch <= 'z') ch = shiftHeld ? static_cast<char>(ch - 32) : ch;
+                else if (ch >= 'A' && ch <= 'Z') ch = shiftHeld ? ch : static_cast<char>(ch + 32);
+                else if (shiftHeld && ch == '-') ch = '_';
+                u.name.push_back(ch);
+            }
+        }
+        static auto bsHoldStart = std::chrono::steady_clock::now();
+        static auto bsLastRepeat = std::chrono::steady_clock::now();
+        static bool bsWasHeld = false;
+        bool bsHeld = keyDown(KEY_BACKSPACE);
+#ifdef _WIN32
+        if (GetAsyncKeyState(VK_BACK) & 0x8000) bsHeld = true;
+#endif
+        auto now = std::chrono::steady_clock::now();
+        if (keyPressed(KEY_BACKSPACE))
+        {
+            if (!u.name.empty()) u.name.pop_back();
+            bsHoldStart = now; bsLastRepeat = now; bsWasHeld = true;
+        }
+        else if (bsHeld)
+        {
+            if (!bsWasHeld) { if (!u.name.empty()) u.name.pop_back(); bsHoldStart = now; bsLastRepeat = now; bsWasHeld = true; }
+            else if (std::chrono::duration_cast<std::chrono::milliseconds>(now - bsHoldStart).count() > 350 && std::chrono::duration_cast<std::chrono::milliseconds>(now - bsLastRepeat).count() > 45 && !u.name.empty())
+            {
+                u.name.pop_back();
+                bsLastRepeat = now;
+            }
+        }
+        else { bsWasHeld = false; }
         if (keyPressed(KEY_RETURN)) { renamingClass = false; statusBanner = "RENAMED DESIGN TO: " + u.name; }
     }
     iV_SetTextColour(pal_RGBA(110, 210, 255, 255)); iV_DrawText("UNIT CLASS EDITOR - GROUND-UP DESIGNER & SIMULATOR", 28, 42, font_large);
@@ -265,18 +312,77 @@ void usaUpdateAndDrawUnitEditor()
             int cIdx = getCompFromID(pickerMode == 1 ? COMP_BODY : COMP_PROPULSION, WzString::fromUtf8(itemId));
             if (cIdx >= 0) {
                 const iIMDBaseShape* bSh = (pickerMode == 1) ? asBodyStats[cIdx].pIMD : asPropulsionStats[cIdx].pIMD;
-                if (bSh) { pie_Begin3DScene(); pie_SetGeometricOffset(cxCard + cw / 2, cyCard + ch / 2 - 6); glm::mat4 m = glm::translate(glm::vec3(0.f, 0.f, 680.f)) * glm::rotate(-0.42f, glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(0.65f, glm::vec3(0.f, 1.f, 0.f)) * glm::scale(glm::vec3((DROID_BUT_SCALE * 1.45f) / 100.f)); for (const iIMDShape* imd = bSh->displayModel(); imd != nullptr; imd = imd->next.get()) pie_Draw3DButton(imd, imd->getTeamColourForModel(getPlayerColour(0)), m, glm::mat4(1.f)); pie_BeginInterface(); pie_SetGeometricOffset(pie_GetVideoBufferWidth() / 2, pie_GetVideoBufferHeight() / 2); }
+                if (bSh) {
+                    static float sGalRot = 0.0f; sGalRot = std::fmod(sGalRot + 0.045f, 360.0f);
+                    const iIMDShape* rootImd = bSh->displayModel();
+                    float rad = (rootImd && rootImd->radius > 10) ? static_cast<float>(rootImd->radius) : 65.0f;
+                    float fitFactor = std::min(1.45f, std::max(0.58f, 78.0f / rad));
+                    pie_Begin3DScene(); pie_SetGeometricOffset(cxCard + cw / 2, cyCard + ch / 2 - 4);
+                    glm::mat4 m = glm::translate(glm::vec3(0.f, 0.f, 680.f)) * glm::rotate(-0.40f, glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(sGalRot * 3.14159265f / 180.f, glm::vec3(0.f, 1.f, 0.f)) * glm::scale(glm::vec3((DROID_BUT_SCALE * fitFactor) / 100.f));
+                    for (const iIMDShape* imd = rootImd; imd != nullptr; imd = imd->next.get()) pie_Draw3DButton(imd, imd->getTeamColourForModel(getPlayerColour(0)), m, glm::mat4(1.f));
+                    pie_BeginInterface(); pie_SetGeometricOffset(pie_GetVideoBufferWidth() / 2, pie_GetVideoBufferHeight() / 2);
+                }
             }
             iV_SetTextColour(WZCOL_WHITE); iV_DrawText(itemName.c_str(), cxCard + 8, cyCard + ch - 24, font_regular);
             iV_SetTextColour(pal_RGBA(150, 200, 240, 230)); iV_DrawText(itemId.c_str(), cxCard + 8, cyCard + ch - 8, font_regular);
         }
-    } else if (pickerMode == 3) {
-        int gx = 240, gy = 130, gw = sw - 480, gh = sh - 200;
+    }
+    else if (pickerMode == 3)
+    {
+        int gx = 72, gy = 118, gw = sw - 144, gh = sh - 156;
         pie_UniTransBoxFill(gx, gy, gx + gw, gy + gh, pal_RGBA(8, 16, 28, 252)); iV_Box(gx, gy, gx + gw, gy + gh, pal_RGBA(110, 215, 255, 255));
-        iV_SetTextColour(pal_RGBA(130, 225, 255, 255)); iV_DrawText("SAVED UNIT DESIGNS (SELECT TO LOAD INTO DESIGNER)", gx + 18, gy + 28, font_large);
+        iV_SetTextColour(pal_RGBA(130, 225, 255, 255)); iV_DrawText("SAVED UNIT DESIGNS (CLICK CARD TO LOAD | RED [X] TO DELETE)", gx + 18, gy + 28, font_large);
         drawBtn(699, gx + gw - 110, gy + 8, 96, 26, "CLOSE [X]", pal_RGBA(115, 28, 28, 250), pal_RGBA(255, 110, 110, 255));
-        if (blueprints.empty()) { iV_SetTextColour(pal_RGBA(220, 200, 130, 255)); iV_DrawText("NO SAVED DESIGNS YET - BUILD A DESIGN AND CLICK [SAVE DESIGN] FIRST.", gx + 24, gy + 82, font_regular); }
-        else { for (size_t i = 0; i < blueprints.size() && i < 10; ++i) { const auto& sb = blueprints[i]; drawBtn(700 + static_cast<int>(i), gx + 18, gy + 48 + static_cast<int>(i) * 34, gw - 36, 28, sb.name + "  |  HULL: " + sb.bodyId + "  |  DRIVE: " + sb.propId + "  |  TURRETS: " + std::to_string(sb.numTurrets), pal_RGBA(20, 46, 78, 245), pal_RGBA(95, 190, 255, 255)); } }
+        if (blueprints.empty())
+        {
+            iV_SetTextColour(pal_RGBA(220, 200, 130, 255));
+            iV_DrawText("NO SAVED DESIGNS YET - BUILD A DESIGN AND CLICK [SAVE DESIGN] FIRST.", gx + 24, gy + 82, font_regular);
+        }
+        else
+        {
+            static float sCardRot = 0.0f; sCardRot = std::fmod(sCardRot + 0.35f, 360.0f); float cardYaw = sCardRot * 3.14159265f / 180.0f;
+            int cols = 2, cw = (gw - 42) / cols, ch = 152;
+            for (size_t i = 0; i < blueprints.size() && i < 6; ++i)
+            {
+                const auto& sb = blueprints[i];
+                int col = static_cast<int>(i) % cols, row = static_cast<int>(i) / cols;
+                int cx = gx + 14 + col * (cw + 14), cy = gy + 44 + row * (ch + 12);
+                clickBoxes.push_back({ 700 + static_cast<int>(i), cx, cy, cw - 34, ch });
+                pie_UniTransBoxFill(cx, cy, cx + cw, cy + ch, pal_RGBA(14, 28, 48, 245));
+                iV_Box(cx, cy, cx + cw, cy + ch, pal_RGBA(75, 165, 235, 240));
+                int pvW = 148, pvH = ch - 16, pvCx = cx + 8 + pvW / 2, pvCy = cy + 8 + pvH / 2 + 16;
+                pie_UniTransBoxFill(cx + 8, cy + 8, cx + 8 + pvW, cy + ch - 8, pal_RGBA(6, 12, 22, 250));
+                iV_Box(cx + 8, cy + 8, cx + 8 + pvW, cy + ch - 8, pal_RGBA(45, 110, 165, 210));
+                int bIdx = getCompFromID(COMP_BODY, WzString::fromUtf8(sb.bodyId)), pIdx = getCompFromID(COMP_PROPULSION, WzString::fromUtf8(sb.propId));
+                float maxSc = std::max({ 1.35f, sb.bodyScaleX, sb.bodyScaleY * 1.15f, sb.bodyScaleZ, sb.propScaleX, sb.propScaleY * 1.15f, sb.propScaleZ });
+                float fitSc = (DROID_BUT_SCALE * 0.54f) / (100.0f * maxSc);
+                pie_Begin3DScene(); pie_SetGeometricOffset(pvCx, pvCy);
+                glm::mat4 rMat = glm::translate(glm::vec3(0.f, 0.f, 680.f)) * glm::rotate(-0.38f, glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(cardYaw, glm::vec3(0.f, 1.f, 0.f)) * glm::scale(glm::vec3(fitSc));
+                auto drawMini = [&](const iIMDBaseShape* bSh, const glm::mat4& m) { if (!bSh) return; for (const iIMDShape* imd = bSh->displayModel(); imd != nullptr; imd = imd->next.get()) pie_Draw3DButton(imd, imd->getTeamColourForModel(getPlayerColour(0)), m, glm::mat4(1.f)); };
+                if (pIdx >= 0) { glm::mat4 pm = rMat * glm::translate(glm::vec3(0.f, sb.propOffsetY, sb.propOffsetZ)) * glm::scale(glm::vec3(sb.propScaleX, sb.propScaleY, sb.propScaleZ)); if (bIdx >= 0 && !asBodyStats[bIdx].ppIMDList.empty()) { drawMini(asBodyStats[bIdx].ppIMDList[pIdx * NUM_PROP_SIDES + LEFT_PROP], pm); drawMini(asBodyStats[bIdx].ppIMDList[pIdx * NUM_PROP_SIDES + RIGHT_PROP], pm); } else drawMini(asPropulsionStats[pIdx].pIMD, pm); }
+                if (bIdx >= 0) drawMini(asBodyStats[bIdx].pIMD, rMat * glm::translate(glm::vec3(0.f, sb.bodyOffsetY, sb.bodyOffsetZ)) * glm::scale(glm::vec3(sb.bodyScaleX, sb.bodyScaleY, sb.bodyScaleZ)));
+                for (int t = 0; t < std::min(4, sb.numTurrets); ++t) { int wi = getCompFromID(COMP_WEAPON, WzString::fromUtf8(sb.turrets[t].weaponId)); if (wi >= 0) { glm::mat4 tm = rMat * glm::translate(glm::vec3(sb.turrets[t].snapX, sb.bodyOffsetY + sb.turrets[t].snapY, sb.bodyOffsetZ + sb.turrets[t].snapZ)) * glm::scale(glm::vec3(sb.turrets[t].scale)); drawMini(asWeaponStats[wi].pMountGraphic, tm); drawMini(asWeaponStats[wi].pIMD, tm); } }
+                pie_BeginInterface(); pie_SetGeometricOffset(pie_GetVideoBufferWidth() / 2, pie_GetVideoBufferHeight() / 2);
+                int tx = cx + pvW + 18, hp = static_cast<int>(450.0f * sb.bodyScaleX * sb.bodyScaleY * sb.bodyScaleZ);
+                iV_SetTextColour(pal_RGBA(120, 230, 255, 255)); iV_DrawText(sb.name.c_str(), tx, cy + 26, font_large);
+                iV_SetTextColour(WZCOL_WHITE); iV_DrawText(("HULL: " + sb.bodyId + "   DRIVE: " + sb.propId).c_str(), tx, cy + 50, font_regular);
+                iV_SetTextColour(pal_RGBA(120, 245, 165, 255)); iV_DrawText(("EST. HP: " + std::to_string(hp) + "   SCALE: " + std::to_string(sb.bodyScaleX).substr(0, 4) + "x").c_str(), tx, cy + 72, font_regular);
+                std::string wList = "TURRETS (" + std::to_string(sb.numTurrets) + "): "; for (int t = 0; t < std::min(4, sb.numTurrets); ++t) wList += sb.turrets[t].weaponId + (t + 1 < sb.numTurrets ? ", " : "");
+                iV_SetTextColour(pal_RGBA(225, 205, 130, 255)); iV_DrawText((wList.size() > 34 ? (wList.substr(0, 31) + "...") : wList).c_str(), tx, cy + 94, font_regular);
+                iV_SetTextColour(pal_RGBA(145, 195, 240, 230)); iV_DrawText("CLICK CARD TO LOAD INTO EDITOR", tx, cy + ch - 14, font_regular);
+                drawBtn(750 + static_cast<int>(i), cx + cw - 30, cy + 6, 24, 24, "X", pal_RGBA(155, 24, 24, 250), pal_RGBA(255, 95, 95, 255));
+            }
+        }
+        if (deleteConfirmIdx >= 0 && deleteConfirmIdx < static_cast<int>(blueprints.size()))
+        {
+            int mw = 640, mh = 146, mx0 = (sw - mw) / 2, my0 = (sh - mh) / 2;
+            pie_UniTransBoxFill(mx0, my0, mx0 + mw, my0 + mh, pal_RGBA(18, 10, 14, 254));
+            iV_Box(mx0, my0, mx0 + mw, my0 + mh, pal_RGBA(255, 90, 90, 255));
+            iV_SetTextColour(pal_RGBA(255, 130, 130, 255)); iV_DrawText("DELETE SAVED DESIGN - ARE YOU SURE?", mx0 + 24, my0 + 34, font_large);
+            iV_SetTextColour(WZCOL_WHITE); iV_DrawText(("DESIGN: " + blueprints[deleteConfirmIdx].name).c_str(), mx0 + 24, my0 + 62, font_regular);
+            drawBtn(790, mx0 + 48, my0 + 94, 240, 30, "YES, DELETE", pal_RGBA(150, 24, 24, 250), pal_RGBA(255, 105, 105, 255));
+            drawBtn(791, mx0 + 352, my0 + 94, 240, 30, "CANCEL", pal_RGBA(32, 54, 82, 245), pal_RGBA(110, 195, 255, 255));
+        }
     }
 }
 bool usaHandleUnitEditorClick(int mx, int my, bool rightClick)
@@ -297,7 +403,7 @@ bool usaHandleUnitEditorClick(int mx, int my, bool rightClick)
         if (b.id == 111) { doRedo(); return true; }
         if (b.id == 108 || b.id >= 202) pushUndoState();
         switch (b.id) {
-        case 102: if (!renamingClass) pushUndoState(); renamingClass = !renamingClass; statusBanner = renamingClass ? "TYPE DESIGN NAME ON KEYBOARD (ENTER TO CONFIRM)" : ("CONFIRMED: " + u.name); break;
+        case 102: if (!renamingClass) pushUndoState(); renamingClass = !renamingClass; if (renamingClass) inputClearBuffer(); statusBanner = renamingClass ? "TYPE DESIGN NAME ON KEYBOARD (ENTER TO CONFIRM)" : ("CONFIRMED: " + u.name); break;
         case 109: pickerMode = (pickerMode == 3) ? 0 : 3; statusBanner = blueprints.empty() ? "NO SAVED DESIGNS YET" : "SELECT A SAVED DESIGN TO LOAD"; break;
         case 108: resetBlankDesign(); pickerMode = 0; statusBanner = "CLEARED DESIGN TO BLANK CANVAS"; break;
         case 105: { if (u.bodyId.empty() || u.propId.empty()) { statusBanner = "CANNOT SAVE BLANK DESIGN - PICK CHASSIS & PROPULSION FIRST"; break; } if (u.numTurrets <= 0) u.numTurrets = 1; bool upd = false; for (auto& ex : blueprints) if (ex.name == u.name) { ex = u; upd = true; break; } if (!upd) blueprints.push_back(u); usaSaveSuperHeavyBlueprints(); statusBanner = "SAVED DESIGN: " + u.name + " (" + std::to_string(blueprints.size()) + " TOTAL)"; break; }
@@ -331,10 +437,10 @@ bool usaHandleUnitEditorClick(int mx, int my, bool rightClick)
         case 432: tr.snapY -= 3.0f * dir; break; case 433: tr.snapY += 3.0f * dir; break;
         case 434: tr.snapZ -= 3.0f * dir; break; case 435: tr.snapZ += 3.0f * dir; break;
         case 500: case 501: case 502: case 503: case 504: case 505: case 506: case 507: case 508: { int ni = b.id - 500; if (activeTurretSlot >= u.numTurrets) u.numTurrets = activeTurretSlot + 1; auto& sr = u.turrets[activeTurretSlot]; sr.snapX = kHullNodes[ni].nx * 15.0f * u.bodyScaleX; sr.snapY = kHullNodes[ni].ny * 11.0f * u.bodyScaleY; sr.snapZ = kHullNodes[ni].nz * 17.0f * u.bodyScaleZ; statusBanner = std::string("MOUNT ") + std::to_string(activeTurretSlot + 1) + " SNAPPED TO " + kHullNodes[ni].label; break; }
-        case 699: pickerMode = 0; break;
+        case 699: deleteConfirmIdx = -1; pickerMode = 0; break; case 790: if (deleteConfirmIdx >= 0 && deleteConfirmIdx < static_cast<int>(blueprints.size())) { statusBanner = "DELETED DESIGN: " + blueprints[deleteConfirmIdx].name; blueprints.erase(blueprints.begin() + deleteConfirmIdx); usaSaveSuperHeavyBlueprints(); } deleteConfirmIdx = -1; break; case 791: deleteConfirmIdx = -1; break;
         case 600: case 601: case 602: case 603: case 604: case 605: case 606: case 607: case 608: case 609: { int idx = b.id - 600; u.bodyId = kBodies[idx]; pickerMode = 0; statusBanner = std::string("EQUIPPED HULL: ") + kBodyNames[idx]; break; }
         case 650: case 651: case 652: case 653: case 654: { int idx = b.id - 650; u.propId = kProps[idx]; pickerMode = 0; syncScaleRules(); statusBanner = std::string("EQUIPPED DRIVE: ") + kPropNames[idx]; break; }
-        default: if (b.id >= 700 && b.id < 700 + static_cast<int>(blueprints.size())) { activeDesign = blueprints[b.id - 700]; activeTurretSlot = 0; pickerMode = 0; statusBanner = "LOADED SAVED DESIGN: " + activeDesign.name; } break;
+        default: if (b.id >= 750 && b.id < 750 + static_cast<int>(blueprints.size())) { deleteConfirmIdx = b.id - 750; } else if (deleteConfirmIdx < 0 && b.id >= 700 && b.id < 700 + static_cast<int>(blueprints.size())) { activeDesign = blueprints[b.id - 700]; activeTurretSlot = 0; pickerMode = 0; statusBanner = "LOADED SAVED DESIGN: " + activeDesign.name; } break;
         }
         return true;
     }

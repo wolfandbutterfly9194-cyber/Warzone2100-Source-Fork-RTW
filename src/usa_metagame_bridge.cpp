@@ -506,8 +506,7 @@ void dispatchOpforOrders(bool stageAtRally)
     static bool simAttackActive = false;
     static bool simArenaInitialized = false;
     static int simSpawnSeq = 0;
-    void spawnSimScavBatch(bool vehicles)
-    {
+    void spawnSimScavBatch(bool vehicles) { static auto lastBatchTime = std::chrono::steady_clock::now() - std::chrono::seconds(5); auto now = std::chrono::steady_clock::now(); if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastBatchTime).count() < 500 || apsDroidLists.at(1).size() >= 40) return; lastBatchTime = now;
         static int opforSeq = 0;
         struct SimDef { const char* name; const char* body; const char* prop; const char* weap; };
         static const SimDef infDefs[] = {
@@ -547,7 +546,7 @@ void dispatchOpforOrders(bool stageAtRally)
     }
 void updateUsaInGameHud()
 {
-        if (bUsaSimulatorMode && psWScreen != nullptr) { if (gameTime < 1500 && simArenaInitialized) { simArenaInitialized = false; inGameHudAttached = false; simAttackActive = false; } bUsaSessionActive = true; }
+        if (bUsaSimulatorMode && psWScreen != nullptr) { if (gameTime < 50 && simArenaInitialized) { simArenaInitialized = false; inGameHudAttached = false; simAttackActive = false; } bUsaSessionActive = true; }
     if (!bUsaSessionActive || psWScreen == nullptr)
     {
         return;
@@ -652,7 +651,7 @@ void updateUsaInGameHud()
 
     if (bUsaSimulatorMode)
     {
-        if (!simArenaInitialized && gameTime >= 1500) { usaApplyNativeBattleSetup(); simArenaInitialized = true;
+        if (!simArenaInitialized && gameTime >= 10) { usaApplyNativeBattleSetup(); simArenaInitialized = true;
             opforTriggeredNow = false;
         }
 
