@@ -114,6 +114,7 @@ struct UsaCampaignState
     std::vector<ComponentDef> props;
     std::vector<ComponentDef> weapons;
     std::vector<DesignedBlueprint> squad;
+    std::vector<DesignedBlueprint> invasionLoadout;
 
     UsaGeneralState general;
 
@@ -125,4 +126,5 @@ struct UsaCampaignState
 UsaCampaignState& getUsaCampaignState();
 UsaColor getUsaFactionColor(UsaFaction f, bool isSelected = false);
 std::string getUsaFactionName(UsaFaction f);
+bool isUsaScavFaction(UsaFaction f);
 bool usaPointInPolygon(const UsaVec2& p, const std::vector<UsaVec2>& poly);

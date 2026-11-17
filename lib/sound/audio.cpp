@@ -1,3 +1,4 @@
+extern bool bUsaSessionActive;
 /*
 	This file is part of Warzone 2100.
 	Copyright (C) 1999-2004  Eidos Interactive
@@ -309,6 +310,7 @@ static AUDIO_SAMPLE *audio_QueueSample(SDWORD iTrack)
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// return if audio not enabled
+    if (bUsaSessionActive) { const char* trName = sound_GetTrackName(iTrack); if (trName != nullptr && strncmp(trName, "pcv", 3) == 0) { return nullptr; } }
 	if (audio_Disabled() || audio_Paused())
 	{
 		return nullptr;
@@ -347,6 +349,7 @@ static AUDIO_SAMPLE *audio_QueueSample(SDWORD iTrack)
 //
 void audio_QueueTrack(SDWORD iTrack)
 {
+    if (bUsaSessionActive && ((iTrack >= ID_SOUND_STRUCTURE_COMPLETED && iTrack < ID_SOUND_GROUP_0) || iTrack == ID_SOUND_POWER_RESOURCE || iTrack == ID_SOUND_RESOURCE_HERE)) { return; }
 	// return if audio not enabled
 	if (audio_Disabled() || audio_Paused())
 	{
@@ -370,6 +373,7 @@ void audio_QueueTrack(SDWORD iTrack)
 //
 void audio_QueueTrackMinDelay(SDWORD iTrack, UDWORD iMinDelay)
 {
+    if (bUsaSessionActive && ((iTrack >= ID_SOUND_STRUCTURE_COMPLETED && iTrack < ID_SOUND_GROUP_0) || iTrack == ID_SOUND_POWER_RESOURCE || iTrack == ID_SOUND_RESOURCE_HERE)) { return; }
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	AUDIO_SAMPLE	*psSample;
 	UDWORD			iDelay;
@@ -405,6 +409,7 @@ void audio_QueueTrackMinDelay(SDWORD iTrack, UDWORD iMinDelay)
 //
 void audio_QueueTrackMinDelayPos(SDWORD iTrack, UDWORD iMinDelay, SDWORD iX, SDWORD iY, SDWORD iZ)
 {
+    if (bUsaSessionActive && ((iTrack >= ID_SOUND_STRUCTURE_COMPLETED && iTrack < ID_SOUND_GROUP_0) || iTrack == ID_SOUND_POWER_RESOURCE || iTrack == ID_SOUND_RESOURCE_HERE)) { return; }
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	AUDIO_SAMPLE	*psSample;
 	UDWORD			iDelay;

@@ -206,6 +206,8 @@ std::string getUsaFactionName(UsaFaction f)
     }
 }
 
+bool isUsaScavFaction(UsaFaction f) { return static_cast<int>(f) >= static_cast<int>(UsaFaction::SCAV_SYNDICATE); }
+
 bool usaPointInPolygon(const UsaVec2& p, const std::vector<UsaVec2>& poly)
 {
     bool inside = false;

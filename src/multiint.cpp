@@ -521,7 +521,7 @@ void loadMultiScripts()
 		loadExtra = true;
 	}
 
-	if (getHostLaunch() == HostLaunch::Skirmish)
+	if (bUsaStripVanillaLobby) { for (unsigned p = 1; p < game.maxPlayers; ++p) { if (NetPlay.players[p].difficulty == AIDifficulty::DISABLED) { NetPlay.players[p].ai = 0; NetPlay.players[p].difficulty = AIDifficulty::MEDIUM; } } } if (getHostLaunch() == HostLaunch::Skirmish)
 	{
 		ininame = "tests/" + WzString::fromUtf8(wz_skirmish_test());
 		path = "tests/";
@@ -3550,7 +3550,7 @@ void WzMultiplayerOptionsTitleUI::openPlayerSlotSwapChooser(uint32_t playerIndex
 	});
 	auto playerRowSwitchArrow = std::make_shared<W_LABEL>();
 	playerRowSwitchArrow->setFont(font_regular, WZCOL_TEXT_MEDIUM);
-	playerRowSwitchArrow->setString("\u21C5"); // ⇅
+	playerRowSwitchArrow->setString("\u21C5"); // ???
 	playerRowSwitchArrow->setGeometry(0, 0, playerRowSwitchArrow->idealWidth(), playerRowSwitchArrow->idealHeight());
 	swapContextForm->attach(playerRowSwitchArrow);
 	playerRowSwitchArrow->setCalcLayout([swapContextFormPadding, textHeight](WIDGET *psWidget) {
@@ -3985,7 +3985,7 @@ void ChatBoxWidget::initialize()
 	if (NetPlay.bComms)
 	{
 		attach(optionsButton = std::make_shared<ChatBoxButton>());
-		optionsButton->setString("\u2699"); // "⚙"
+		optionsButton->setString("\u2699"); // "???"
 		optionsButton->setTip(_("Chat Options"));
 		optionsButton->FontID = font_regular;
 		int minButtonWidthForText = iV_GetTextWidth(optionsButton->pText, optionsButton->FontID);
@@ -5194,7 +5194,7 @@ static bool loadMapChallengeAndPlayerSettings(bool forceLoadPlayers = false)
 
 	WzString ininame = challengeActive ? sRequestResult : aFileName;
 	bool warnIfMissing = false;
-	if (getHostLaunch() == HostLaunch::Skirmish)
+	if (bUsaStripVanillaLobby) { for (unsigned p = 1; p < game.maxPlayers; ++p) { if (NetPlay.players[p].difficulty == AIDifficulty::DISABLED) { NetPlay.players[p].ai = 0; NetPlay.players[p].difficulty = AIDifficulty::MEDIUM; } } } if (getHostLaunch() == HostLaunch::Skirmish)
 	{
 		ininame = "tests/" + WzString::fromUtf8(wz_skirmish_test());
 		warnIfMissing = true;
@@ -6673,15 +6673,27 @@ TITLECODE WzMultiplayerOptionsTitleUI::run()
 	}
 
 
-	if (!bUsaStripVanillaLobby || multiplayIsStartingGame())
-
-	{
-		widgDisplayScreen(psWScreen);
-	}
-	else
-	{
-		pie_UniTransBoxFill(0, 0, pie_GetVideoBufferWidth(), pie_GetVideoBufferHeight(), pal_RGBA(0, 0, 0, 255));
-	}
+        if (!bUsaStripVanillaLobby)
+        {
+                widgDisplayScreen(psWScreen);
+        }
+        else
+        {
+                int vw = pie_GetVideoBufferWidth(), vh = pie_GetVideoBufferHeight();
+                pie_UniTransBoxFill(0, 0, vw, vh, pal_RGBA(8, 12, 18, 255));
+                int bx = vw / 2 - 420, by = vh / 2 - 210, bw = 840, bh = 420;
+                pie_UniTransBoxFill(bx, by, bx + bw, by + bh, pal_RGBA(14, 22, 34, 250));
+                iV_Box(bx, by, bx + bw, by + bh, pal_RGBA(80, 145, 220, 255));
+                iV_Box(bx + 6, by + 6, bx + bw - 6, by + bh - 6, pal_RGBA(45, 85, 135, 220));
+                iV_DrawText("TACTICAL INTELLIGENCE BRIEFING // ORBITAL RECON INTERCEPT", static_cast<float>(bx + 28), static_cast<float>(by + 44), font_regular);
+                iV_DrawText("ALERT: ENEMY RADAR HAS DETECTED OUR INBOUND TRANSPORT SIGNATURE.", static_cast<float>(bx + 28), static_cast<float>(by + 92), font_regular);
+                iV_DrawText("OPFOR GARRISONS ARE ON HIGH ALERT AND REINFORCING OIL NODES.", static_cast<float>(bx + 28), static_cast<float>(by + 126), font_regular);
+                iV_DrawText("MISSION DIRECTIVE:", static_cast<float>(bx + 28), static_cast<float>(by + 178), font_regular);
+                iV_DrawText("1. SECURE BEACHHEAD LZ & DEPLOY COMBAT ENGINEERS FROM DROPSHIP.", static_cast<float>(bx + 44), static_cast<float>(by + 212), font_regular);
+                iV_DrawText("2. FORTIFY PERIMETER & BUILD BASE DURING 10:00 PREP WINDOW.", static_cast<float>(bx + 44), static_cast<float>(by + 244), font_regular);
+                iV_DrawText("3. REPEL OPFOR ASSAULT WAVES & ELIMINATE ALL ENEMY CITADELS.", static_cast<float>(bx + 44), static_cast<float>(by + 276), font_regular);
+                iV_DrawText("INSERTION TRANSPORTS DESCENDING TO BEACHHEAD LZ...", static_cast<float>(bx + 28), static_cast<float>(by + 344), font_regular);
+        }
 
 
 	if (CancelPressed())
@@ -6954,7 +6966,8 @@ void WzMultiplayerOptionsTitleUI::start()
 		{
 			sendReadyRequest(selectedPlayer, true);
 		}
-		if (getHostLaunch() == HostLaunch::Skirmish)
+                if (bUsaStripVanillaLobby) { for (unsigned p = 1; p < game.maxPlayers; ++p) { NetPlay.players[p].ai = 0; NetPlay.players[p].difficulty = AIDifficulty::MEDIUM; } }
+		if (bUsaStripVanillaLobby) { for (unsigned p = 1; p < game.maxPlayers; ++p) { if (NetPlay.players[p].difficulty == AIDifficulty::DISABLED) { NetPlay.players[p].ai = 0; NetPlay.players[p].difficulty = AIDifficulty::MEDIUM; } } } if (getHostLaunch() == HostLaunch::Skirmish)
 		{
 			startMultiplayerGame();
 			// reset flag in case people dropped/quit on join screen

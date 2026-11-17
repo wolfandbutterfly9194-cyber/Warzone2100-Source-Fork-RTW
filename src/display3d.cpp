@@ -1,3 +1,4 @@
+extern bool bUsaSessionActive;
 /*
 	This file is part of Warzone 2100.
 	Copyright (C) 1999-2004  Eidos Interactive
@@ -202,7 +203,7 @@ bool radarPermitted = true;
 
 bool radarVisible()
 {
-	if (radarOnScreen && radarPermitted && getWidgetsStatus())
+	if (bUsaSessionActive || (radarOnScreen && radarPermitted && getWidgetsStatus()))
 	{
 		return true;
 	}
@@ -2196,7 +2197,7 @@ void displayBlueprints(const glm::mat4 &viewMatrix, const glm::mat4 &perspective
 				}
 				else
 				{
-					// Rotated 90°, swap width and height
+					// Rotated 90??, swap width and height
 					width  = sBuildDetails.height;
 					height = sBuildDetails.width;
 				}
@@ -3128,7 +3129,7 @@ static bool renderWallSection(STRUCTURE *psStructure, const glm::mat4 &viewMatri
 	dv.z = -(psStructure->pos.y);
 	dv.y = psStructure->pos.z;
 
-	dv.y -= gateCurrentOpenHeight(psStructure, graphicsTime, 1);  // Make gate stick out by 1 unit, so that the tops of ┼ gates can safely have heights differing by 1 unit.
+	dv.y -= gateCurrentOpenHeight(psStructure, graphicsTime, 1);  // Make gate stick out by 1 unit, so that the tops of ??? gates can safely have heights differing by 1 unit.
 
 	const glm::mat4 modelMatrix = glm::translate(glm::vec3(dv)) * glm::rotate(UNDEG(-psStructure->rot.direction), glm::vec3(0.f, 1.f, 0.f));
 
@@ -4092,7 +4093,7 @@ static void trackHeight(int desiredHeight)
 
 	float separation = desiredHeight - playerPos.p.y;	// How far are we from desired height?
 
-	// d²/dt² player.p.y = -ACCEL_CONSTANT * (player.p.y - desiredHeight) - VELOCITY_CONSTANT * d/dt player.p.y
+	// d??/dt?? player.p.y = -ACCEL_CONSTANT * (player.p.y - desiredHeight) - VELOCITY_CONSTANT * d/dt player.p.y
 	solveDifferential2ndOrder(&separation, &heightSpeed, ACCEL_CONSTANT, VELOCITY_CONSTANT, (float) deltaTrackHeightRealTime / (float) GAME_TICKS_PER_SEC);
 
 	/* Adjust the height accordingly */
@@ -4367,7 +4368,7 @@ static void	showDroidSensorRanges()
 
 static void showEffectCircle(Position centre, int32_t radius, uint32_t auxVar, EFFECT_GROUP group, EFFECT_TYPE type)
 {
-	const int32_t circumference = radius * 2 * 355 / 113 / TILE_UNITS; // 2πr in tiles.
+	const int32_t circumference = radius * 2 * 355 / 113 / TILE_UNITS; // 2??r in tiles.
 	for (int i = 0; i < circumference; ++i)
 	{
 		Vector3i pos;

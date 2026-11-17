@@ -1,3 +1,4 @@
+extern bool bUsaSessionActive;
 #include "usa_metagame_bridge.h"
 /*
 	This file is part of Warzone 2100.
@@ -397,7 +398,7 @@ void setReticuleStats(int ButId, std::string tip, std::string filename, std::str
 	ASSERT_OR_RETURN(, (ButId >= 0) && (ButId < NUMRETBUTS), "Invalid ButId: %d", ButId);
 
 	retbutstats[ButId].tip = tip;
-	retbutstats[ButId].filename = WzString::fromUtf8(filename.c_str());
+	if (bUsaSessionActive && ButId == RETBUT_BUILD && filename.empty()) { filename = "image_build_up.png"; filenameDown = "image_build_down.png"; tip = "Build (F3)"; } retbutstats[ButId].filename = WzString::fromUtf8(filename.c_str());
 	retbutstats[ButId].filenameDown = WzString::fromUtf8(filenameDown.c_str());
 	retbutstats[ButId].downTime = 0;
 	retbutstats[ButId].flashing = false;
@@ -3036,6 +3037,7 @@ void intNotifyResearchButton(int prevState)
 // see if a reticule button is enabled
 bool intCheckReticuleButEnabled(UDWORD id)
 {
+    if (bUsaSessionActive && (id == IDRET_BUILD || id == IDRET_MANUFACTURE || id == IDRET_RESEARCH || id == IDRET_DESIGN || id == IDRET_INTEL_MAP || id == IDRET_COMMAND)) { for (auto &r : ReticuleEnabled) if (r.id == id) r.Enabled = true; return true; }
 	for (auto &i : ReticuleEnabled)
 	{
 		if (i.id == id)

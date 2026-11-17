@@ -1,3 +1,4 @@
+extern bool bUsaSessionActive;
 /*
 	This file is part of Warzone 2100.
 	Copyright (C) 1999-2004  Eidos Interactive
@@ -1220,7 +1221,7 @@ enum WallOrientation
 
 // Orientations are:                   IMDs are:
 // 0 1 2 3 4 5 6 7 8 9 A B C D E F     0 1 2 3
-//   ╴ ╶ ─ ╵ ┘ └ ┴ ╷ ┐ ┌ ┬ │ ┤ ├ ┼     ─ ┼ ┴ ┘
+//   ??? ??? ??? ??? ??? ??? ??? ??? ??? ??? ??? ??? ??? ??? ???     ??? ??? ??? ???
 
 static uint16_t wallDir(WallOrientation orient)
 {
@@ -2492,7 +2493,7 @@ bool placeDroid(STRUCTURE *psStructure, const DROID_TEMPLATE * psTempl, UDWORD *
 	int ymin = std::max(bounds.map.y - 1, 0);
 	int ymax = std::min(bounds.map.y + bounds.size.y, mapHeight);
 
-	// Round direction to nearest 90°.
+	// Round direction to nearest 90??.
 	uint16_t direction = snapDirection(psStructure->rot.direction);
 
 	/* We sort all adjacent tiles by their Manhattan distance to the
@@ -2863,7 +2864,7 @@ static bool checkHaltOnMaxUnitsReached(STRUCTURE *psStructure, bool isMission)
 	if (IsPlayerDroidLimitReached(player))
 	{
 		isLimit = true;
-		sstrcpy(limitMsg, _("Can't build any more units, Unit Limit Reached — Production Halted"));
+		sstrcpy(limitMsg, _("Can't build any more units, Unit Limit Reached ??? Production Halted"));
 	}
 	else switch (droidTemplateType(templ))
 		{
@@ -2871,12 +2872,12 @@ static bool checkHaltOnMaxUnitsReached(STRUCTURE *psStructure, bool isMission)
 			if (!structureExists(player, REF_COMMAND_CONTROL, true, isMission))
 			{
 				isLimit = true;
-				ssprintf(limitMsg, _("Can't build \"%s\" without a Command Relay Center — Production Halted"), templ->name.toUtf8().c_str());
+				ssprintf(limitMsg, _("Can't build \"%s\" without a Command Relay Center ??? Production Halted"), templ->name.toUtf8().c_str());
 			}
 			else if (getNumCommandDroids(player) >= getMaxCommanders(player))
 			{
 				isLimit = true;
-				ssprintf(limitMsg, _("Can't build \"%s\", Commander Limit Reached — Production Halted"), templ->name.toUtf8().c_str());
+				ssprintf(limitMsg, _("Can't build \"%s\", Commander Limit Reached ??? Production Halted"), templ->name.toUtf8().c_str());
 			}
 			break;
 		case DROID_CONSTRUCT:
@@ -2884,7 +2885,7 @@ static bool checkHaltOnMaxUnitsReached(STRUCTURE *psStructure, bool isMission)
 			if (getNumConstructorDroids(player) >= getMaxConstructors(player))
 			{
 				isLimit = true;
-				ssprintf(limitMsg, _("Can't build any more \"%s\", Construction Unit Limit Reached — Production Halted"), templ->name.toUtf8().c_str());
+				ssprintf(limitMsg, _("Can't build any more \"%s\", Construction Unit Limit Reached ??? Production Halted"), templ->name.toUtf8().c_str());
 			}
 			break;
 		default:
@@ -4088,7 +4089,7 @@ std::vector<STRUCTURE_STATS *> fillStructureList(UDWORD _selectedPlayer, UDWORD 
 	// find maximum allowed limits (current built numbers already available, just grab them)
 	for (inc = 0; inc < numStructureStats; inc++)
 	{
-		if (apStructTypeLists[_selectedPlayer][inc] == AVAILABLE || (includeRedundantDesigns && apStructTypeLists[_selectedPlayer][inc] == REDUNDANT))
+		bool usaStarterOk = false; if (bUsaSessionActive && _selectedPlayer == selectedPlayer) { std::string sid = asStructureStats[inc].id.toUtf8(); if (sid == "A0CommandCentre" || sid == "A0PowerGenerator" || sid == "A0ResourceExtractor" || sid == "A0LightFactory" || sid == "A0ResearchFacility" || sid == "A0RepairCentre3" || sid == "GuardTower1" || sid == "PillBox1" || sid == "TankTrapC" || sid == "A0HardcreteMk1Wall") { usaStarterOk = true; apStructTypeLists[_selectedPlayer][inc] = AVAILABLE; if (asStructureStats[inc].upgrade[_selectedPlayer].limit < 10) asStructureStats[inc].upgrade[_selectedPlayer].limit = 10; } } if (usaStarterOk || apStructTypeLists[_selectedPlayer][inc] == AVAILABLE || (includeRedundantDesigns && apStructTypeLists[_selectedPlayer][inc] == REDUNDANT))
 		{
 			int8_t *counter;
 			if (asStructureStats[inc].type == REF_RESEARCH)
@@ -4127,7 +4128,7 @@ std::vector<STRUCTURE_STATS *> fillStructureList(UDWORD _selectedPlayer, UDWORD 
 	for (inc = 0; inc < numStructureStats; inc++)
 	{
 		//if the structure is flagged as available, add it to the list
-		if (apStructTypeLists[_selectedPlayer][inc] == AVAILABLE || (includeRedundantDesigns && apStructTypeLists[_selectedPlayer][inc] == REDUNDANT))
+		bool usaStarterOk = false; if (bUsaSessionActive && _selectedPlayer == selectedPlayer) { std::string sid = asStructureStats[inc].id.toUtf8(); if (sid == "A0CommandCentre" || sid == "A0PowerGenerator" || sid == "A0ResourceExtractor" || sid == "A0LightFactory" || sid == "A0ResearchFacility" || sid == "A0RepairCentre3" || sid == "GuardTower1" || sid == "PillBox1" || sid == "TankTrapC" || sid == "A0HardcreteMk1Wall") { usaStarterOk = true; apStructTypeLists[_selectedPlayer][inc] = AVAILABLE; if (asStructureStats[inc].upgrade[_selectedPlayer].limit < 10) asStructureStats[inc].upgrade[_selectedPlayer].limit = 10; } } if (usaStarterOk || apStructTypeLists[_selectedPlayer][inc] == AVAILABLE || (includeRedundantDesigns && apStructTypeLists[_selectedPlayer][inc] == REDUNDANT))
 		{
 			//check not built the maximum allowed already
 			if (asStructureStats[inc].curCount[_selectedPlayer] < asStructureStats[inc].upgrade[_selectedPlayer].limit)
@@ -4151,7 +4152,7 @@ std::vector<STRUCTURE_STATS *> fillStructureList(UDWORD _selectedPlayer, UDWORD 
 				}
 
 				//can't build list when offworld
-				if (missionIsOffworld())
+				if (!bUsaSessionActive && missionIsOffworld())
 				{
 					if (psBuilding->type == REF_FACTORY ||
 					    psBuilding->type == REF_COMMAND_CONTROL ||

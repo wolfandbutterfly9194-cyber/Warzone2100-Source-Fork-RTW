@@ -283,6 +283,21 @@ bool runUsaOverworldUi()
             return true;
         }
 
+        if (activeRightTab == 0)
+        {
+            const Territory& sel = camp.states[camp.selectedIndex];
+            if (sel.owner != UsaFaction::THE_PROJECT)
+            {
+                int genSlots = camp.general.bodyId.empty() ? 0 : 1, usedSlots = genSlots; for (const auto& m : camp.invasionLoadout) usedSlots += m.count;
+                for (int s = 0; s < std::min<int>(5, static_cast<int>(camp.squad.size())); ++s)
+                {
+                    int ry = static_cast<int>((360 + s * 34) * sy); const auto& bp = camp.squad[s];
+                    int curIn = 0; for (const auto& m : camp.invasionLoadout) if (m.name == bp.name && m.bodyId == bp.bodyId && m.weaponId == bp.weaponId) curIn = m.count;
+                    if (hitRect(mx, my, bx + bw - static_cast<int>(78 * sx), ry, static_cast<int>(34 * sx), static_cast<int>(28 * sy)) && curIn > 0) { for (auto it = camp.invasionLoadout.begin(); it != camp.invasionLoadout.end(); ++it) { if (it->name == bp.name && it->bodyId == bp.bodyId && it->weaponId == bp.weaponId) { it->count--; if (it->count <= 0) camp.invasionLoadout.erase(it); break; } } return true; }
+                    if (hitRect(mx, my, bx + bw - static_cast<int>(38 * sx), ry, static_cast<int>(34 * sx), static_cast<int>(28 * sy)) && usedSlots < 10) { bool f = false; for (auto& m : camp.invasionLoadout) { if (m.name == bp.name && m.bodyId == bp.bodyId && m.weaponId == bp.weaponId) { m.count++; f = true; break; } } if (!f) { DesignedBlueprint cp = bp; cp.count = 1; camp.invasionLoadout.push_back(cp); } return true; }
+                }
+            }
+        }
         if (activeRightTab == 0 && hitRect(mx, my, bx, static_cast<int>(265 * sy), bw, static_cast<int>(44 * sy)))
         {
             const Territory& sel = camp.states[camp.selectedIndex];
@@ -525,6 +540,24 @@ void renderUsaOverworldUi()
         drawWzButton(bx, depY, bw, depH, owned ? "ENTER BASE COMMAND & GARRISON" : "LAUNCH TACTICAL INVASION",
             owned ? pal_RGBA(24, 78, 132, 255) : pal_RGBA(135, 32, 32, 255),
             owned ? pal_RGBA(95, 185, 255, 255) : pal_RGBA(255, 105, 105, 255), !systemMenuOpen && hitRect(mx, my, bx, depY, bw, depH));
+        if (!owned)
+        {
+            int genSlots = camp.general.bodyId.empty() ? 0 : 1, usedSlots = genSlots; for (const auto& m : camp.invasionLoadout) usedSlots += m.count;
+            std::string capHdr = "PRE-BATTLE DEPLOYMENT MANIFEST (" + std::to_string(usedSlots) + "/10 SLOTS)";
+            iV_DrawText(capHdr.c_str(), static_cast<float>(bx), static_cast<float>(332 * sy), font_regular);
+            iV_DrawText(genSlots > 0 ? "[1 SLOT] DRAGON GENERAL (AUTO-BOARDED)" : "[0 SLOTS] GENERAL UNBUILT (BUILD IN GENERAL TAB)", static_cast<float>(bx), static_cast<float>(350 * sy), font_regular);
+            for (int s = 0; s < std::min<int>(5, static_cast<int>(camp.squad.size())); ++s)
+            {
+                int ry = static_cast<int>((360 + s * 34) * sy); const auto& bp = camp.squad[s];
+                int curIn = 0; for (const auto& m : camp.invasionLoadout) if (m.name == bp.name && m.bodyId == bp.bodyId && m.weaponId == bp.weaponId) curIn = m.count;
+                drawWzPlate(bx, ry, bw - static_cast<int>(84 * sx), static_cast<int>(28 * sy), pal_RGBA(14,20,30,240), pal_RGBA(52,72,98,220), false);
+                std::string rowTxt = bp.name + "  [DEPLOY: " + std::to_string(curIn) + "]";
+                iV_DrawText(rowTxt.c_str(), static_cast<float>(bx + 8), static_cast<float>(ry + 18), font_regular);
+                drawWzButton(bx + bw - static_cast<int>(78 * sx), ry, static_cast<int>(34 * sx), static_cast<int>(28 * sy), "-", pal_RGBA(22,32,48,245), pal_RGBA(95,130,175,255), hitRect(mx, my, bx + bw - static_cast<int>(78 * sx), ry, static_cast<int>(34 * sx), static_cast<int>(28 * sy)));
+                drawWzButton(bx + bw - static_cast<int>(38 * sx), ry, static_cast<int>(34 * sx), static_cast<int>(28 * sy), "+", pal_RGBA(22,32,48,245), pal_RGBA(95,130,175,255), hitRect(mx, my, bx + bw - static_cast<int>(38 * sx), ry, static_cast<int>(34 * sx), static_cast<int>(28 * sy)));
+            }
+            iV_DrawText("DROP: 10-CAP TRANSPORT | 4:00 PREP | 5 WAVES | FACTORY RAIDS", static_cast<float>(bx), static_cast<float>(550 * sy), font_regular);
+        }
     }
     else if (activeRightTab == 1)
     {
