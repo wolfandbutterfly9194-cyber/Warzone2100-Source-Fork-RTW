@@ -1,3 +1,4 @@
+#include "usa_unit_editor.h"
 extern int usaBeachheadLzX, usaBeachheadLzY;
 #include "usa_battle_setup.h"
 #include "fpath.h"
@@ -82,7 +83,7 @@ namespace
 {
     bool overworldDesignStatsLoaded = false;
 
-    bool usaEnsureOverworldDesignAssets()
+    bool usaEnsureOverworldDesignAssetsInternal()
     {
         if (overworldDesignStatsLoaded) return true;
         rebuildSearchPath(mod_multiplay, true);
@@ -114,7 +115,7 @@ namespace
 
 void usaOpenOverworldDesigner(UsaOverworldDesignMode mode)
 {
-    if (!usaEnsureOverworldDesignAssets()) return;
+    if (!usaEnsureOverworldDesignAssetsInternal()) return;
     if (usaOverworldDesignMode != UsaOverworldDesignMode::NONE)
     {
         intRemoveDesign();
@@ -503,7 +504,8 @@ void dispatchOpforOrders(bool stageAtRally)
 
 void updateUsaInGameHud()
 {
-        if (!bUsaSessionActive || psWScreen == nullptr)
+        if (bUsaSimulatorMode && psWScreen != nullptr) { if (gameTime < 500 && combatTimerStarted) { combatTimerStarted = false; inGameHudAttached = false; } bUsaSessionActive = true; }
+    if (!bUsaSessionActive || psWScreen == nullptr)
     {
         return;
     }
@@ -605,6 +607,87 @@ void updateUsaInGameHud()
         return;
     }
 
+    if (bUsaSimulatorMode)
+    {
+        if (!combatTimerStarted)
+        {
+            usaApplyNativeBattleSetup();
+            combatTimerStarted = true;
+            opforTriggeredNow = false;
+        }
+        static bool simAttackActive = false;
+        auto spawnSimScavBatch = [](bool vehicles) {
+            struct SimDef { const char* name; const char* body; const char* prop; const char* weap; bool person; };
+            static const SimDef infDefs[] = {
+                { "Scav Raider", "BaBaLegs", "BaBaLegs", "BabaMG", true },
+                { "Rocket Raider", "BaBaLegs", "BaBaLegs", "BabaRocket", true }
+            };
+            static const SimDef vehDefs[] = {
+                { "Scav Trike", "B1BaBaViper01", "BaBaProp", "BabaMG", false },
+                { "Scav Buggy", "B4body-sml-trike01", "BaBaProp", "BabaRocket", false },
+                { "Scav Cannon Jeep", "B3body-sml-buggy01", "BaBaProp", "Cannon1Mk1", false },
+                { "Scav Scorpion", "Body5REC", "tracked01", "Cannon2A-TMk1", false }
+            };
+            int count = vehicles ? 6 : 10;
+            int baseY = 8;
+            for (int i = 0; i < count; ++i)
+            {
+                const SimDef& sd = vehicles ? vehDefs[i % 4] : infDefs[i % 2];
+                int bIdx = getCompFromID(COMP_BODY, WzString::fromUtf8(sd.body));
+                int pIdx = getCompFromID(COMP_PROPULSION, WzString::fromUtf8(sd.prop));
+                int wIdx = getCompFromID(COMP_WEAPON, WzString::fromUtf8(sd.weap));
+                if (bIdx < 0 || pIdx < 0 || wIdx < 0) continue;
+                auto tmpl = std::make_unique<DROID_TEMPLATE>();
+                tmpl->name = WzString::fromUtf8(sd.name); tmpl->id = WzString::fromUtf8(sd.name);
+                for (int k = 0; k < DROID_MAXCOMP; ++k) tmpl->asParts[k] = 0;
+                tmpl->asParts[COMP_BODY] = bIdx; tmpl->asParts[COMP_PROPULSION] = pIdx;
+                tmpl->numWeaps = 1; *(tmpl->asWeaps) = wIdx;
+                tmpl->droidType = sd.person ? DROID_PERSON : DROID_WEAPON;
+                DROID_TEMPLATE* pt = addTemplate(1, std::move(tmpl));
+                if (!pt) continue;
+                int sx = std::max(6, std::min(mapWidth - 7, (mapWidth / 2) - 8 + (i % 8) * 2));
+                int sy = std::max(6, std::min(mapHeight - 7, baseY + (i / 8) * 2));
+                DROID* nd = reallyBuildDroid(pt, Position(world_coord(sx) + TILE_UNITS / 2, world_coord(sy) + TILE_UNITS / 2, 0), 1, false);
+                if (nd) { addDroid(nd, apsDroidLists); orderDroid(nd, DORDER_HOLD, ModeImmediate); }
+            }
+        };
+        if (!inGameHudAttached)
+        {
+            int bw = 162, bh = 28, gap = 8;
+            int sx = (pie_GetVideoBufferWidth() - (bw * 4 + gap * 3)) / 2;
+            makeStyledButton(0, ID_USA_INGAME_SAVEEXIT, sx, 10, bw, bh, "[ + SCAV INFANTRY ]", false);
+            makeStyledButton(0, ID_USA_INGAME_SAVEEXIT + 1, sx + (bw + gap), 10, bw, bh, "[ + SCAV VEHICLES ]", false);
+            makeStyledButton(0, ID_USA_INGAME_SAVEEXIT + 2, sx + (bw + gap) * 2, 10, bw, bh, "[ LAUNCH ATTACK ]", false);
+            makeStyledButton(0, ID_USA_INGAME_SAVEEXIT + 3, sx + (bw + gap) * 3, 10, bw, bh, "[ STOP & KILL SCAVS ]", false);
+            if (WIDGET* b0 = widgGetFromID(psWScreen, ID_USA_INGAME_SAVEEXIT))
+                static_cast<W_BUTTON*>(b0)->addOnClickHandler([&](W_BUTTON&) { spawnSimScavBatch(false); });
+            if (WIDGET* b1 = widgGetFromID(psWScreen, ID_USA_INGAME_SAVEEXIT + 1))
+                static_cast<W_BUTTON*>(b1)->addOnClickHandler([&](W_BUTTON&) { spawnSimScavBatch(true); });
+            if (WIDGET* b2 = widgGetFromID(psWScreen, ID_USA_INGAME_SAVEEXIT + 2))
+                static_cast<W_BUTTON*>(b2)->addOnClickHandler([&](W_BUTTON&) {
+                    simAttackActive = true;
+                    for (DROID* d : apsDroidLists.at(1))
+                        if (d && !d->died && !apsDroidLists.at(0).empty())
+                            orderDroidObj(d, DORDER_ATTACK, apsDroidLists.at(0).front(), ModeImmediate);
+                });
+            if (WIDGET* b3 = widgGetFromID(psWScreen, ID_USA_INGAME_SAVEEXIT + 3))
+                static_cast<W_BUTTON*>(b3)->addOnClickHandler([&](W_BUTTON&) {
+                    simAttackActive = false;
+                    std::vector<DROID*> killList;
+                    for (DROID* d : apsDroidLists.at(1)) if (d && !d->died) killList.push_back(d);
+                    for (DROID* d : killList) destroyDroid(d, graphicsTime);
+                });
+            inGameHudAttached = true;
+        }
+        if (simAttackActive && !apsDroidLists.at(0).empty())
+        {
+            DROID* target = apsDroidLists.at(0).front();
+            for (DROID* d : apsDroidLists.at(1))
+                if (d && !d->died && d->order.type != DORDER_ATTACK)
+                    orderDroidObj(d, DORDER_ATTACK, target, ModeImmediate);
+        }
+        return;
+    }
     // Combat Mode: Live 4:00 OpFor Awareness Countdown + [ ATTACK NOW ] Test Button
     if (!combatTimerStarted)
     {
@@ -768,3 +851,5 @@ void updateUsaInGameHud()
     }
 }
 
+
+bool usaEnsureOverworldDesignAssets() { return usaEnsureOverworldDesignAssetsInternal(); }

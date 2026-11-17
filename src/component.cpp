@@ -1,3 +1,4 @@
+#include "usa_unit_editor.h"
 /*
 	This file is part of Warzone 2100.
 	Copyright (C) 1999-2004  Eidos Interactive
@@ -521,6 +522,9 @@ static bool displayCompObj(const DROID *psDroid, bool bButton, const glm::mat4& 
 	}
 
 	/* Get the body graphic now*/
+	const SuperHeavyBlueprint* psShBp = usaFindSuperHeavyByName(std::string(psDroid->aName));
+	glm::mat4 bodyMat = modifiedModelMatrix;
+	if (psShBp) { bodyMat = bodyMat * glm::translate(glm::vec3(0.f, psShBp->bodyOffsetY, psShBp->bodyOffsetZ)) * glm::scale(glm::vec3(psShBp->bodyScaleX, psShBp->bodyScaleY, psShBp->bodyScaleZ)); }
 	const iIMDBaseShape *psBaseShapeBody = BODY_IMD(psDroid, psDroid->player);
 	const iIMDShape *psShapeBody = (psBaseShapeBody) ? psBaseShapeBody->displayModel() : nullptr;
 	if (psShapeBody)
@@ -536,7 +540,7 @@ static bool displayCompObj(const DROID *psDroid, bool bButton, const glm::mat4& 
 		}
 		while (strImd)
 		{
-			if (drawShape(strImd, psDroid->timeAnimationStarted, colour, brightness, pieFlag, iPieData, modifiedModelMatrix, viewMatrix, -(psDroid->heightAboveMap)))
+			if (drawShape(strImd, psDroid->timeAnimationStarted, colour, brightness, pieFlag, iPieData, bodyMat, viewMatrix, -(psDroid->heightAboveMap)))
 			{
 				didDrawSomething = true;
 			}

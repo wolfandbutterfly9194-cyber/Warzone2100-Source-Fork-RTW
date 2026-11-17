@@ -1,3 +1,4 @@
+#include "usa_unit_editor.h"
 #pragma warning(disable : 4505)
 #include "usa_metagame_bridge.h"
 /*
@@ -220,6 +221,7 @@ addBottomForm();
 
 addTextButton(FRONTEND_SINGLEPLAYER, FRONTEND_POS3X, FRONTEND_POS3Y, _("Global Reclamation Campaign"), WBUT_TXTCENTRE);
 addTextButton(FRONTEND_OPTIONS, FRONTEND_POS5X, FRONTEND_POS5Y, _("Options"), WBUT_TXTCENTRE);
+addTextButton(FRONTEND_UNITEDITOR, FRONTEND_POS6X, FRONTEND_POS6Y, _("Unit Class Editor"), WBUT_TXTCENTRE);
 addSideText(FRONTEND_SIDETEXT, FRONTEND_SIDEX, FRONTEND_SIDEY, _("GLOBAL RECLAMATION")); (void)&runHyperlink; (void)&runUpgrdHyperlink; (void)&notifyAboutMissingVideos;
 }
 void runContinue()
@@ -237,6 +239,7 @@ bool runTitleMenu()
 		bUsaPrebattle = true;
 	}
 
+    if (usaIsUnitEditorOpen()) { if (mousePressed(MOUSE_LMB)) { usaHandleUnitEditorClick(mouseX(), mouseY(), false); } else if (mousePressed(MOUSE_RMB)) { usaHandleUnitEditorClick(mouseX(), mouseY(), true); } usaUpdateAndDrawUnitEditor(); return true; }
 	if (bUsaPrebattle)
 	{
 		runUsaPrebattleTick();
@@ -264,6 +267,9 @@ bool runTitleMenu()
 	case FRONTEND_OPTIONS:
 		changeTitleUI(std::make_shared<WzOptionsTitleUI>(wzTitleUICurrent));
 		break;
+    case FRONTEND_UNITEDITOR:
+            usaOpenUnitEditor();
+            break;
 	case FRONTEND_TUTORIAL:
 		changeTitleMode(TUTORIAL);
 		break;

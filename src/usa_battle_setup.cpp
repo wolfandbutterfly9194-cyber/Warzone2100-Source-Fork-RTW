@@ -1,3 +1,4 @@
+#include "usa_unit_editor.h"
 #include "usa_battle_setup.h"
 #include "usa_scav_gen.h"
 #include "usa_campaign_state.h"
