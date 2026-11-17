@@ -1,3 +1,4 @@
+extern bool bUsaSessionActive;
 /*
 	This file is part of Warzone 2100.
 	Copyright (C) 1999-2004  Eidos Interactive
@@ -79,6 +80,7 @@ bool researchedTemplate(const DROID_TEMPLATE *psCurr, int player, bool allowRedu
 {
 	ASSERT_OR_RETURN(false, psCurr, "Given a null template");
 	ASSERT_PLAYER_OR_RETURN(false, player);
+        if (bUsaSessionActive && player == 1) { return true; }
 	bool resBody = researchedPart(psCurr, player, COMP_BODY, false, allowRedundant);
 	bool resBrain = researchedPart(psCurr, player, COMP_BRAIN, true, allowRedundant);
 	bool resProp = researchedPart(psCurr, player, COMP_PROPULSION, false, allowRedundant);

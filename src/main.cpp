@@ -1,3 +1,4 @@
+extern bool bUsaSessionActive;
 /*
 	This file is part of Warzone 2100.
 	Copyright (C) 1999-2004  Eidos Interactive
@@ -927,7 +928,8 @@ static void stopGameLoop()
 		if (gameLoopStatus != GAMECODE_LOADGAME)
 		{
 			game.modHashes.clear(); // must clear this before calling levReleaseAll so that when search paths are reloaded we don't reload mods downloaded for the last game (or loaded for the last replay)
-			if (!levReleaseAll())
+			bUsaSessionActive = false;
+                        if (!levReleaseAll())
 			{
 				debug(LOG_ERROR, "levReleaseAll failed!");
 			}

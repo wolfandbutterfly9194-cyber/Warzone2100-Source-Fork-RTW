@@ -1,3 +1,6 @@
+extern int usaBeachheadLzX, usaBeachheadLzY;
+#include "usa_battle_setup.h"
+#include "fpath.h"
 #include <chrono>
 #include <cstdio>
 #include <SDL3/SDL_events.h>
@@ -431,12 +434,14 @@ void usaProduceOpforUnits(bool isScav)
         }
         else if (!scavTemplates.empty())
         {
-            size_t waveCap = std::min<size_t>(110, 35 + static_cast<size_t>(scavWaveNumber) * 15); if (apsDroidLists.at(1).size() >= waveCap) break;
-            DROID_TEMPLATE* psChosen = scavTemplates[(fIdx + waveRound) % scavTemplates.size()];
-            int spawnX = std::max(world_coord(4), std::min(world_coord(mapWidth - 5), psStruct->pos.x + world_coord((fIdx % 3) - 1)));
-            int spawnY = std::max(world_coord(4), std::min(world_coord(mapHeight - 5), psStruct->pos.y + world_coord(4)));
-            DROID* psNew = reallyBuildDroid(psChosen, Position(spawnX, spawnY, 0), 1, false);
-            if (psNew != nullptr) { addDroid(psNew, apsDroidLists); }
+            size_t waveCap = opforTriggeredNow ? std::min<size_t>(220, 120 + static_cast<size_t>(scavWaveNumber) * 20) : 140;
+            if (apsDroidLists.at(1).size() >= waveCap) break;
+            if (psStruct->pFunctionality && psStruct->pFunctionality->factory.psSubject == nullptr)
+            {
+                DROID_TEMPLATE* psChosen = scavTemplates[(fIdx + waveRound) % scavTemplates.size()];
+                for (UDWORD si = 0; si < numStructureStats; ++si) { if (asStructureStats[si].id == psStruct->pStructureType->id) { asStructureStats[si].upgrade[1].production = 150; break; } }
+                structSetManufacture(psStruct, psChosen, ModeImmediate);
+            }
         }
         fIdx++;
     }
@@ -503,6 +508,42 @@ void updateUsaInGameHud()
         return;
     }
 
+    UsaCampaignState& campState = getUsaCampaignState();
+    static bool dropshipUnloaded = false, dropshipDeparted = false; static int landedTicks = 0; static UDWORD lastShipTick = 0;
+    if (!combatTimerStarted) { dropshipUnloaded = false; dropshipDeparted = false; landedTicks = 0; }
+    static int dropEdgeX = 5, dropEdgeY = 5;
+    if (!campState.activeSessionIsBaseMode && !campState.activeSessionIsDefense && !dropshipDeparted)
+    {
+        DROID* ship = nullptr; for (DROID* d : apsDroidLists.at(0)) { if (d && !d->died && (d->droidType == DROID_TRANSPORTER || d->droidType == DROID_SUPERTRANSPORTER || std::string(d->aName) == "Invasion Dropship")) { ship = d; break; } }
+        bool stepShip = (gameTime - lastShipTick >= 25); if (stepShip) lastShipTick = gameTime;
+        if (ship != nullptr && stepShip)
+        {
+            ship->sMove.Status = MOVEINACTIVE; ship->rot.pitch = 0;
+            if (!dropshipUnloaded)
+            {
+                int targetWx = world_coord(usaBeachheadLzX) + TILE_UNITS / 2, targetWy = world_coord(usaBeachheadLzY) + TILE_UNITS / 2;
+                double dx = targetWx - ship->pos.x, dy = targetWy - ship->pos.y, dist = std::hypot(dx, dy);
+                int groundZ = map_Height(ship->pos.x, ship->pos.y);
+                if (dist > 48.0) { ship->pos.x += static_cast<int>((dx / dist) * 16.0); ship->pos.y += static_cast<int>((dy / dist) * 16.0); ship->rot.direction = static_cast<uint16_t>(std::atan2(dx, dy) * 32768.0 / 3.14159265); int desiredZ = groundZ + std::max(24, static_cast<int>(dist * 0.25)); ship->pos.z = (ship->pos.z > desiredZ) ? std::max(desiredZ, ship->pos.z - 14) : desiredZ; }
+                else { ship->pos.x = targetWx; ship->pos.y = targetWy; ship->pos.z = std::max(groundZ + 8, ship->pos.z - 16); if (ship->pos.z <= groundZ + 14) landedTicks++; }
+                if (landedTicks >= 12)
+                {
+                    dropshipUnloaded = true; int cap = 10;
+                    if (!campState.general.bodyId.empty() && cap > 0) { cap--; int bIdx = getCompFromID(COMP_BODY, WzString::fromUtf8(campState.general.bodyId)), pIdx = getCompFromID(COMP_PROPULSION, WzString::fromUtf8(campState.general.propId)), w1 = getCompFromID(COMP_WEAPON, WzString::fromUtf8(campState.general.weapon1Id)), w2 = getCompFromID(COMP_WEAPON, WzString::fromUtf8(campState.general.weapon2Id)), br = getCompFromID(COMP_BRAIN, WzString::fromUtf8("CommandBrain01")); if (bIdx >= 0 && pIdx >= 0) { auto gt = std::make_unique<DROID_TEMPLATE>(); gt->name = WzString::fromUtf8("Command General"); gt->id = WzString::fromUtf8("Command General"); for (int k = 0; k < DROID_MAXCOMP; ++k) gt->asParts[k] = 0; gt->asParts[COMP_BODY] = bIdx; gt->asParts[COMP_PROPULSION] = pIdx; if (br >= 0) gt->asParts[COMP_BRAIN] = br; if (w1 >= 0) { gt->numWeaps = (w2 >= 0) ? 2 : 1; *(gt->asWeaps) = w1; if (w2 >= 0) *(gt->asWeaps + 1) = w2; } gt->droidType = DROID_COMMAND; DROID_TEMPLATE* gpt = addTemplate(0, std::move(gt)); if (gpt) { DROID* gd = reallyBuildDroid(gpt, Position(targetWx, targetWy, 0), 0, false); if (gd) addDroid(gd, apsDroidLists); } } }
+                    std::vector<DesignedBlueprint> fullManifest = { { "Combat Engineer", "Body1REC", "wheeled01", "Spade1Mk1", 0, 2 } }; const auto& srcList = campState.invasionLoadout.empty() ? campState.squad : campState.invasionLoadout; for (const auto& item : srcList) fullManifest.push_back(item);
+                    for (const auto& bp : fullManifest) { for (int c = 0; c < bp.count && cap > 0; ++c) { int bIdx = getCompFromID(COMP_BODY, WzString::fromUtf8(bp.bodyId)), pIdx = getCompFromID(COMP_PROPULSION, WzString::fromUtf8(bp.propId)), wIdx = getCompFromID(COMP_WEAPON, WzString::fromUtf8(bp.weaponId)); if (bIdx >= 0 && pIdx >= 0) { auto tmpl = std::make_unique<DROID_TEMPLATE>(); tmpl->name = WzString::fromUtf8(bp.name); tmpl->id = WzString::fromUtf8(bp.name); for (int k = 0; k < DROID_MAXCOMP; ++k) tmpl->asParts[k] = 0; tmpl->asParts[COMP_BODY] = bIdx; tmpl->asParts[COMP_PROPULSION] = pIdx; int cIdx = (wIdx < 0) ? getCompFromID(COMP_CONSTRUCT, WzString::fromUtf8(bp.weaponId)) : -1; if (wIdx >= 0) { tmpl->numWeaps = 1; *(tmpl->asWeaps) = wIdx; tmpl->droidType = droidTemplateType(tmpl.get()); } else if (cIdx >= 0) { tmpl->asParts[COMP_CONSTRUCT] = cIdx; tmpl->droidType = DROID_CONSTRUCT; } else { tmpl->droidType = droidTemplateType(tmpl.get()); } DROID_TEMPLATE* pt = addTemplate(0, std::move(tmpl)); if (pt) { int sTx = usaBeachheadLzX, sTy = usaBeachheadLzY; bool foundTile = false; for (int rad = 1; rad <= 12 && !foundTile; ++rad) { for (int ox = -rad; ox <= rad && !foundTile; ++ox) { for (int oy = -rad; oy <= rad && !foundTile; ++oy) { int cx = std::max(5, std::min(mapWidth - 6, usaBeachheadLzX + ox)), cy = std::max(5, std::min(mapHeight - 6, usaBeachheadLzY + oy)); if (!fpathBlockingTile(cx, cy, PROPULSION_TYPE_WHEELED) && !TileHasStructure(mapTile(cx, cy))) { bool used = false; for (DROID* ed : apsDroidLists.at(0)) { if (ed && !ed->died && map_coord(ed->pos.x) == cx && map_coord(ed->pos.y) == cy) { used = true; break; } } if (!used) { sTx = cx; sTy = cy; foundTile = true; } } } } } DROID* nd = reallyBuildDroid(pt, Position(world_coord(sTx) + TILE_UNITS / 2, world_coord(sTy) + TILE_UNITS / 2, 0), 0, false); if (nd) { if (cIdx >= 0) nd->droidType = DROID_CONSTRUCT; addDroid(nd, apsDroidLists); } } } cap--; } }
+                    dropEdgeX = (usaBeachheadLzX < mapWidth / 2) ? 3 : (mapWidth - 4); dropEdgeY = (usaBeachheadLzY < mapHeight / 2) ? 3 : (mapHeight - 4); intRefreshScreen();
+                }
+            }
+            else
+            {
+                int goalWx = world_coord(dropEdgeX) + TILE_UNITS / 2, goalWy = world_coord(dropEdgeY) + TILE_UNITS / 2;
+                double dx = goalWx - ship->pos.x, dy = goalWy - ship->pos.y, dist = std::hypot(dx, dy);
+                if (dist > 64.0) { ship->pos.x += static_cast<int>((dx / dist) * 18.0); ship->pos.y += static_cast<int>((dy / dist) * 18.0); ship->rot.direction = static_cast<uint16_t>(std::atan2(dx, dy) * 32768.0 / 3.14159265); int flyZ = map_Height(ship->pos.x, ship->pos.y) + 380; ship->pos.z = (ship->pos.z < flyZ) ? std::min(flyZ, ship->pos.z + 18) : flyZ; }
+                else { vanishDroid(ship); dropshipDeparted = true; }
+            }
+        }
+    }
     if (false && bUsaGeneralDesignMode)
     {
         static bool designOpened = false;
@@ -673,13 +714,27 @@ void updateUsaInGameHud()
     }
 
     if (!opforTriggeredNow)
+    if (!opforTriggeredNow)
+    {
+        for (DROID* psEnemy : apsDroidLists.at(1))
+        {
+            if (!psEnemy || psEnemy->died || psEnemy->droidType == DROID_CONSTRUCT || psEnemy->isVtol()) continue;
+            int ex = map_coord(psEnemy->pos.x), ey = map_coord(psEnemy->pos.y);
+            bool nearFac = TileHasStructure(mapTile(ex, ey));
+            for (STRUCTURE* fac : apsStructLists.at(1)) { if (fac && !fac->died && (fac->isFactory() || fac->pStructureType->id.toUtf8() == "A0BaBaFactory") && std::hypot(ex - map_coord(fac->pos.x), ey - map_coord(fac->pos.y)) <= 3.5) { nearFac = true; break; } }
+            if (nearFac)
+            {
+                if (TileHasStructure(mapTile(ex, ey))) { for (int off = 2; off <= 5; ++off) if (ey + off < mapHeight - 5 && !TileHasStructure(mapTile(ex, ey + off)) && !fpathBlockingTile(ex, ey + off, (psEnemy->droidType == DROID_PERSON ? PROPULSION_TYPE_LEGGED : PROPULSION_TYPE_WHEELED))) { psEnemy->pos.x = world_coord(ex) + TILE_UNITS / 2; psEnemy->pos.y = world_coord(ey + off) + TILE_UNITS / 2; psEnemy->pos.z = map_Height(psEnemy->pos.x, psEnemy->pos.y); ey += off; break; } }
+                if (psEnemy->order.type != DORDER_MOVE) { int rx = std::max(6, std::min(mapWidth - 7, ex + (static_cast<int>(psEnemy->id % 9) - 4))); int ry = std::max(6, std::min(mapHeight - 7, ey + 8)); if (!fpathBlockingTile(rx, ry, (psEnemy->droidType == DROID_PERSON ? PROPULSION_TYPE_LEGGED : PROPULSION_TYPE_WHEELED)) && !TileHasStructure(mapTile(rx, ry))) orderDroidLoc(psEnemy, DORDER_MOVE, world_coord(rx) + TILE_UNITS / 2, world_coord(ry) + TILE_UNITS / 2, ModeImmediate); }
+            }
+            else if (psEnemy->order.type == DORDER_NONE) { orderDroid(psEnemy, DORDER_HOLD, ModeImmediate); }
+        }
+    }
+    if (!opforTriggeredNow)
     {
         auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - combatStartTime).count();
         int rem = 240 - static_cast<int>(elapsed);
-        if (rem <= 0)
-        {
-            triggerOpforAttackNow();
-        }
+        if (rem <= 0) { triggerOpforAttackNow(); }
         else if (rem != lastShownSec)
         {
             lastShownSec = rem;
@@ -695,7 +750,7 @@ void updateUsaInGameHud()
                     activeFacs++;
                 }
             }
-            if (rem % 6 == 0)
+            if (rem % 4 == 0)
             {
                 bool scavMode = ((getUsaCampaignState().activeTargetIndex >= 0 && getUsaCampaignState().states[getUsaCampaignState().activeTargetIndex].owner == UsaFaction::SCAV_SYNDICATE) || loadBriefingJson().factionName.find("Scav") != std::string::npos);
                 addPower(1, 2500);
