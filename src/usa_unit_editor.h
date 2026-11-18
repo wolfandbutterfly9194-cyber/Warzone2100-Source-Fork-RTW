@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
-struct SuperHeavyTurretSlot { std::string weaponId; float scale = 1.15f, snapX = 0.0f, snapY = 10.0f, snapZ = 0.0f; int presetIndex = 0; };
+struct SuperHeavyTurretSlot { std::string weaponId; float scale = 1.15f, snapX = 0.0f, snapY = 10.0f, snapZ = 0.0f, pitch = 0.0f, roll = 0.0f; int presetIndex = 0, nodeIndex = 0; };
 struct SuperHeavyBlueprint {
     std::string name = "New Unit Class", bodyId = "", propId = "";
     float bodyScaleX = 1.35f, bodyScaleY = 1.35f, bodyScaleZ = 1.35f, bodyOffsetY = 5.0f, bodyOffsetZ = 0.0f;

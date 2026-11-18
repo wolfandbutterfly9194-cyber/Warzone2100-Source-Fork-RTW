@@ -48,7 +48,7 @@ namespace
     void pushUndoState() { undoStack.push_back(activeDesign); if (undoStack.size() > 40) undoStack.erase(undoStack.begin()); redoStack.clear(); }
     void doUndo() { if (undoStack.empty()) { statusBanner = "NOTHING TO UNDO"; return; } redoStack.push_back(activeDesign); activeDesign = undoStack.back(); undoStack.pop_back(); statusBanner = "UNDID LAST ACTION"; }
     void doRedo() { if (redoStack.empty()) { statusBanner = "NOTHING TO REDO"; return; } undoStack.push_back(activeDesign); activeDesign = redoStack.back(); redoStack.pop_back(); statusBanner = "REDID ACTION"; }
-    int activeTurretSlot = 0, pickerMode = 0, lastDragX = 0, lastDragY = 0, deleteConfirmIdx = -1;
+    int activeTurretSlot = 0, pickerMode = 0, lastDragX = 0, lastDragY = 0, deleteConfirmIdx = -1, selectedWeaponCategory = 0; std::string pendingPlacementWeaponId = "", pendingPlacementLabel = "";
     float previewYaw = 35.0f, previewPitch = -22.0f, previewZoom = 1.0f;
     struct ButtonBox { int id, x, y, w, h; }; std::vector<ButtonBox> clickBoxes;
     const char* kBodies[] = { "Body12SUP", "Body14SUP", "Body11ABT", "Body9REC", "Body10MBT", "Body6SUPP", "Body7ABT", "Body5REC", "Body4ABT", "Body1REC" };
@@ -58,11 +58,24 @@ namespace
     const char* kWeapons[] = { "Cannon375mmMk1", "Cannon2A-TMk1", "Rocket-HvyA-T", "Missile-A-T", "RailGun3Mk1", "Laser2PULSEMk1", "Howitzer105Mk1", "Rocket-Pod", "MG3Mk1" };
     const char* kWeapNames[] = { "Heavy Cannon", "Medium Cannon", "Tank Killer", "Scourge AT", "Gauss Cannon", "Pulse Laser", "Howitzer", "Mini-Rocket", "Heavy MG" };
     const char* kPresetNames[] = { "Roof Center", "Forward Deck", "Rear Deck", "Left Sponson", "Right Sponson", "High Command" };
+    struct TurretModuleDef { int cat; int compType; const char* id; const char* label; };
+    const char* kCatNames[] = { "MACHINEGUNS", "CANNONS", "ROCKETS & MISSILES", "MORTARS & ARTILLERY", "RAILGUNS & LASERS", "FLAMERS & PLASMA", "ANTI-AIR & EMP", "UTILITY / SENSORS / REPAIR" };
+    const char* kCatPreviewIds[] = { "MG3Mk1", "Cannon375mmMk1", "Rocket-HvyA-T", "Howitzer105Mk1", "RailGun3Mk1", "Flame2", "QuadRotAAGun", "SensorTurret1Mk1" };
+    const TurretModuleDef kTurretModules[] = {
+        { 0, COMP_WEAPON, "MG1Mk1", "Machinegun" }, { 0, COMP_WEAPON, "MG2Mk1", "Twin MG" }, { 0, COMP_WEAPON, "MG3Mk1", "Heavy MG" }, { 0, COMP_WEAPON, "MG4ROTARYMk1", "Assault Gun" }, { 0, COMP_WEAPON, "MG5TWINROTARY", "Twin Assault Gun" },
+        { 1, COMP_WEAPON, "Cannon1Mk1", "Light Cannon" }, { 1, COMP_WEAPON, "Cannon2A-TMk1", "Medium Cannon" }, { 1, COMP_WEAPON, "Cannon375mmMk1", "Heavy Cannon" }, { 1, COMP_WEAPON, "Cannon4AUTOMk1", "Hyper Velocity" }, { 1, COMP_WEAPON, "Cannon5VulcanMk1", "Assault Cannon" }, { 1, COMP_WEAPON, "Cannon6TwinAslt", "Twin Assault Cannon" },
+        { 2, COMP_WEAPON, "Rocket-Pod", "Mini-Rocket Pod" }, { 2, COMP_WEAPON, "Rocket-LtA-T", "Lancer AT" }, { 2, COMP_WEAPON, "Rocket-HvyA-T", "Tank Killer" }, { 2, COMP_WEAPON, "Rocket-BB", "Bunker Buster" }, { 2, COMP_WEAPON, "Rocket-MRL", "Mini-Rocket Array" }, { 2, COMP_WEAPON, "Missile-A-T", "Scourge Missile" }, { 2, COMP_WEAPON, "Missile-MdArt", "Seraph Missile" }, { 2, COMP_WEAPON, "Missile-HvyArt", "Archangel Missile" },
+        { 3, COMP_WEAPON, "Mortar1Mk1", "Mortar" }, { 3, COMP_WEAPON, "Mortar2Mk1", "Bombard" }, { 3, COMP_WEAPON, "Mortar3ROTARYMk1", "Pepperpot" }, { 3, COMP_WEAPON, "Howitzer105Mk1", "Howitzer" }, { 3, COMP_WEAPON, "Howitzer150Mk1", "Ground Shaker" }, { 3, COMP_WEAPON, "Howitzer03-Rot", "Hellstorm" },
+        { 4, COMP_WEAPON, "RailGun1Mk1", "Needle Gun" }, { 4, COMP_WEAPON, "RailGun2-VTOL", "Rail Gun" }, { 4, COMP_WEAPON, "RailGun3Mk1", "Gauss Cannon" }, { 4, COMP_WEAPON, "Laser3BEAMMk1", "Flashlight Laser" }, { 4, COMP_WEAPON, "Laser2PULSEMk1", "Pulse Laser" }, { 4, COMP_WEAPON, "HeavyLaser", "Heavy Laser" },
+        { 5, COMP_WEAPON, "Flame1Mk1", "Flamer" }, { 5, COMP_WEAPON, "Flame2", "Inferno Flamer" }, { 5, COMP_WEAPON, "PlasmiteFlamer", "Plasmite Flamer" }, { 5, COMP_WEAPON, "Laser4-PlasmaCannon", "Plasma Cannon" },
+        { 6, COMP_WEAPON, "QuadMg1AAGun", "Hurricane AA" }, { 6, COMP_WEAPON, "QuadRotAAGun", "Whirlwind AA" }, { 6, COMP_WEAPON, "AAGun2Mk1", "Flak Cannon" }, { 6, COMP_WEAPON, "Missile-HvySAM", "Vindicator SAM" }, { 6, COMP_WEAPON, "EMP-Cannon", "EMP Cannon" },
+        { 7, COMP_SENSOR, "SensorTurret1Mk1", "Sensor Turret" }, { 7, COMP_SENSOR, "Sensor-WideSpec", "Wide Spectrum Sensor" }, { 7, COMP_SENSOR, "RadarDetector", "Radar Detector" }, { 7, COMP_REPAIRUNIT, "LightRepair1", "Repair Turret" }, { 7, COMP_REPAIRUNIT, "HeavyRepair", "Heavy Repair" }, { 7, COMP_CONSTRUCT, "Spade1Mk1", "Construct Crane" }, { 7, COMP_ECM, "ECM1TurretMk1", "ECM Jammer" }, { 7, COMP_BRAIN, "CommandBrain01", "Command Turret" }
+    };
     void resetBlankDesign() {
         activeDesign = SuperHeavyBlueprint(); activeDesign.name = "New Unit Class"; activeDesign.bodyId = ""; activeDesign.propId = "";
         activeDesign.bodyScaleX = 1.35f; activeDesign.bodyScaleY = 1.35f; activeDesign.bodyScaleZ = 1.35f; activeDesign.bodyOffsetY = 5.0f;
         activeDesign.matchChassisScale = true; activeDesign.propScaleX = 1.35f; activeDesign.propScaleY = 1.28f; activeDesign.propScaleZ = 1.35f;
-        activeDesign.numTurrets = 0; for (int t = 0; t < 4; ++t) activeDesign.turrets[t] = { "Cannon375mmMk1", 1.15f, 0.0f, 11.0f, 0.0f, t }; activeTurretSlot = 0;
+        activeDesign.numTurrets = 0; for (int t = 0; t < 4; ++t) activeDesign.turrets[t] = { "Cannon375mmMk1", 1.15f, 0.0f, 11.0f, 0.0f, 0.0f, 0.0f, t, 0 }; activeTurretSlot = 0;
     }
 }
 const std::vector<SuperHeavyBlueprint>& usaGetSuperHeavyBlueprints() { if (!blueprintsLoadedOnce) usaLoadSuperHeavyBlueprints(); return blueprints; }
@@ -81,7 +94,7 @@ void usaSaveSuperHeavyBlueprints() {
             << "\"bodyScale\":[" << u.bodyScaleX << "," << u.bodyScaleY << "," << u.bodyScaleZ << "],\"bodyOff\":[" << u.bodyOffsetY << "," << u.bodyOffsetZ << "],"
             << "\"propScale\":[" << u.propScaleX << "," << u.propScaleY << "," << u.propScaleZ << "],\"propOff\":[" << u.propOffsetY << "," << u.propOffsetZ << "],"
             << "\"numTurrets\":" << u.numTurrets << ",\"turrets\":[";
-        for (int t = 0; t < 4; ++t) out << "{\"w\":\"" << u.turrets[t].weaponId << "\",\"s\":" << u.turrets[t].scale << ",\"x\":" << u.turrets[t].snapX << ",\"y\":" << u.turrets[t].snapY << ",\"z\":" << u.turrets[t].snapZ << ",\"p\":" << u.turrets[t].presetIndex << "}" << (t < 3 ? "," : "");
+        for (int t = 0; t < 4; ++t) out << "{\"w\":\"" << u.turrets[t].weaponId << "\",\"s\":" << u.turrets[t].scale << ",\"x\":" << u.turrets[t].snapX << ",\"y\":" << u.turrets[t].snapY << ",\"z\":" << u.turrets[t].snapZ << ",\"p\":" << u.turrets[t].presetIndex << ",\"pt\":" << u.turrets[t].pitch << ",\"rl\":" << u.turrets[t].roll << ",\"ni\":" << u.turrets[t].nodeIndex << "}" << (t < 3 ? "," : "");
         out << "]}" << (i + 1 < blueprints.size() ? "," : "") << "\n";
     }
     out << "  ]\n}\n";
@@ -99,7 +112,7 @@ void usaLoadSuperHeavyBlueprints() {
         size_t po = raw.find("\"propOff\":", pos); if (po != std::string::npos) std::sscanf(raw.c_str() + po + 10, "[%f,%f]", &u.propOffsetY, &u.propOffsetZ);
         size_t nt = raw.find("\"numTurrets\":", pos); if (nt != std::string::npos) std::sscanf(raw.c_str() + nt + 13, "%d", &u.numTurrets);
         size_t tp = raw.find("\"turrets\":", pos);
-        for (int t = 0; t < 4 && tp != std::string::npos; ++t) { size_t ob = raw.find('{', tp); if (ob == std::string::npos) break; u.turrets[t].weaponId = readStr("\"w\":", ob); size_t sp = raw.find("\"s\":", ob); if (sp != std::string::npos) std::sscanf(raw.c_str() + sp + 4, "%f,\"x\":%f,\"y\":%f,\"z\":%f,\"p\":%d", &u.turrets[t].scale, &u.turrets[t].snapX, &u.turrets[t].snapY, &u.turrets[t].snapZ, &u.turrets[t].presetIndex); tp = ob + 1; }
+        for (int t = 0; t < 4 && tp != std::string::npos; ++t) { size_t ob = raw.find('{', tp); if (ob == std::string::npos) break; u.turrets[t].weaponId = readStr("\"w\":", ob); size_t sp = raw.find("\"s\":", ob); if (sp != std::string::npos) std::sscanf(raw.c_str() + sp + 4, "%f,\"x\":%f,\"y\":%f,\"z\":%f,\"p\":%d,\"pt\":%f,\"rl\":%f,\"ni\":%d", &u.turrets[t].scale, &u.turrets[t].snapX, &u.turrets[t].snapY, &u.turrets[t].snapZ, &u.turrets[t].presetIndex, &u.turrets[t].pitch, &u.turrets[t].roll, &u.turrets[t].nodeIndex); tp = ob + 1; }
         if (!u.name.empty() && !u.bodyId.empty() && !u.propId.empty()) loaded.push_back(u); pos += 8;
     }
     blueprints = std::move(loaded);
@@ -132,12 +145,113 @@ namespace
         iV_SetTextColour(WZCOL_WHITE); int tw = iV_GetTextWidth(label.c_str(), font_regular); iV_DrawText(label.c_str(), x + std::max(6, (w - tw) / 2), y + (h / 2) + 4, font_regular);
     }
     struct HullNodeSpec { const char* label; float nx, ny, nz; };
-    const HullNodeSpec kHullNodes[] = { { "ROOF CENTER", 0.0f, 1.05f, 0.0f }, { "FORWARD DECK", 0.0f, 0.82f, 1.05f }, { "REAR DECK", 0.0f, 1.12f, -1.05f }, { "PORT SPONSON", -1.05f, 0.55f, 0.05f }, { "STBD SPONSON", 1.05f, 0.55f, 0.05f }, { "PORT CHEEK", -0.68f, 0.72f, 0.85f }, { "STBD CHEEK", 0.68f, 0.72f, 0.85f }, { "AFT PORT", -0.75f, 0.85f, -0.82f }, { "AFT STBD", 0.75f, 0.85f, -0.82f } };
+    const HullNodeSpec kHullNodes[] = { { "ROOF CENTER", 0.0f, 1.0f, -0.05f }, { "FORWARD DECK", 0.0f, 0.95f, 0.48f }, { "REAR DECK", 0.0f, 1.0f, -0.54f }, { "PORT MID", -0.44f, 1.0f, -0.05f }, { "STBD MID", 0.44f, 1.0f, -0.05f }, { "PORT FWD", -0.42f, 0.95f, 0.42f }, { "STBD FWD", 0.42f, 0.95f, 0.42f }, { "PORT AFT", -0.44f, 1.0f, -0.52f }, { "STBD AFT", 0.44f, 1.0f, -0.52f } };
+    struct HullSnapResult { float x = 0.f, y = 10.f, z = 0.f, pitch = 0.f, roll = 0.f; };
+    struct HullSurfaceHit { bool hit = false; float x = 0.f, y = 10.f, z = 0.f, pitch = 0.f, roll = 0.f; };
+    HullSurfaceHit lastHoverHit;
+    HullSurfaceHit raycastBodyAtXZ(const SuperHeavyBlueprint& u, float tx, float tz)
+    {
+        HullSurfaceHit res;
+        int bIdx = u.bodyId.empty() ? -1 : getCompFromID(COMP_BODY, WzString::fromUtf8(u.bodyId));
+        const iIMDShape* imd = (bIdx >= 0 && asBodyStats[bIdx].pIMD) ? asBodyStats[bIdx].pIMD->displayModel() : nullptr;
+        if (!imd || imd->points.empty() || imd->polys.empty()) return res;
+        float bestY = -1e9f; glm::vec3 bestN(0.f, 1.f, 0.f);
+        for (const auto& poly : imd->polys) {
+            uint32_t i0 = poly.pindex[0], i1 = poly.pindex[1], i2 = poly.pindex[2];
+            if (i0 >= imd->points.size() || i1 >= imd->points.size() || i2 >= imd->points.size()) continue;
+            glm::vec3 v0(imd->points[i0].x * u.bodyScaleX, imd->points[i0].y * u.bodyScaleY, imd->points[i0].z * u.bodyScaleZ);
+            glm::vec3 v1(imd->points[i1].x * u.bodyScaleX, imd->points[i1].y * u.bodyScaleY, imd->points[i1].z * u.bodyScaleZ);
+            glm::vec3 v2(imd->points[i2].x * u.bodyScaleX, imd->points[i2].y * u.bodyScaleY, imd->points[i2].z * u.bodyScaleZ);
+            glm::vec3 n = glm::cross(v1 - v0, v2 - v0);
+            float len = glm::length(n);
+            if (len < 1e-4f) continue;
+            n /= len;
+            if (n.y < 0.45f) continue;
+            float denom = (v1.z - v2.z) * (v0.x - v2.x) + (v2.x - v1.x) * (v0.z - v2.z);
+            if (std::fabs(denom) < 1e-4f) continue;
+            float a = ((v1.z - v2.z) * (tx - v2.x) + (v2.x - v1.x) * (tz - v2.z)) / denom;
+            float b = ((v2.z - v0.z) * (tx - v2.x) + (v0.x - v2.x) * (tz - v2.z)) / denom;
+            float c = 1.0f - a - b;
+            if (a >= -0.02f && b >= -0.02f && c >= -0.02f) {
+                float hy = a * v0.y + b * v1.y + c * v2.y;
+                if (hy > bestY) { bestY = hy; bestN = n; res.hit = true; }
+            }
+        }
+        if (res.hit) {
+            res.x = tx - bestN.x * 0.25f;
+            res.y = bestY - bestN.y * 0.25f;
+            res.z = tz - bestN.z * 0.25f;
+            res.pitch = std::max(-0.55f, std::min(0.55f, -std::atan2(bestN.z, bestN.y)));
+            res.roll = std::max(-0.55f, std::min(0.55f, -std::atan2(bestN.x, bestN.y)));
+        }
+        return res;
+    }
+    HullSurfaceHit raycastBodyAtScreen(const SuperHeavyBlueprint& u, const glm::mat4& rootMat, int cx, int baseCy, int mx, int my)
+    {
+        HullSurfaceHit res;
+        int bIdx = u.bodyId.empty() ? -1 : getCompFromID(COMP_BODY, WzString::fromUtf8(u.bodyId));
+        const iIMDShape* imd = (bIdx >= 0 && asBodyStats[bIdx].pIMD) ? asBodyStats[bIdx].pIMD->displayModel() : nullptr;
+        if (!imd || imd->points.empty() || imd->polys.empty()) return res;
+        pie_SetGeometricOffset(cx, baseCy);
+        glm::mat4 uiProj = pie_UIPerspectiveGet();
+        pie_SetGeometricOffset(pie_GetVideoBufferWidth() / 2, pie_GetVideoBufferHeight() / 2);
+        float halfScrW = static_cast<float>(pie_GetVideoBufferWidth()) * 0.5f;
+        float halfScrH = static_cast<float>(pie_GetVideoBufferHeight()) * 0.5f;
+        float bestDepth = 1e9f;
+        for (const auto& poly : imd->polys) {
+            uint32_t i0 = poly.pindex[0], i1 = poly.pindex[1], i2 = poly.pindex[2];
+            if (i0 >= imd->points.size() || i1 >= imd->points.size() || i2 >= imd->points.size()) continue;
+            glm::vec3 v0(imd->points[i0].x * u.bodyScaleX, imd->points[i0].y * u.bodyScaleY, imd->points[i0].z * u.bodyScaleZ);
+            glm::vec3 v1(imd->points[i1].x * u.bodyScaleX, imd->points[i1].y * u.bodyScaleY, imd->points[i1].z * u.bodyScaleZ);
+            glm::vec3 v2(imd->points[i2].x * u.bodyScaleX, imd->points[i2].y * u.bodyScaleY, imd->points[i2].z * u.bodyScaleZ);
+            glm::vec3 n = glm::cross(v1 - v0, v2 - v0);
+            float len = glm::length(n);
+            if (len < 1e-4f) continue;
+            n /= len;
+            if (n.y < 0.45f) continue;
+            auto projPt = [&](const glm::vec3& p) -> glm::vec3 {
+                glm::vec4 clip = uiProj * rootMat * glm::vec4(p.x, p.y + u.bodyOffsetY, p.z + u.bodyOffsetZ, 1.0f);
+                float invW = (std::fabs(clip.w) > 1e-4f) ? (1.0f / std::fabs(clip.w)) : 0.0f;
+                return glm::vec3((clip.x * invW + 1.0f) * halfScrW, (1.0f - clip.y * invW) * halfScrH, std::fabs(clip.w));
+            };
+            glm::vec3 s0 = projPt(v0), s1 = projPt(v1), s2 = projPt(v2);
+            float denom = (s1.y - s2.y) * (s0.x - s2.x) + (s2.x - s1.x) * (s0.y - s2.y);
+            if (std::fabs(denom) < 1e-3f) continue;
+            float fmx = static_cast<float>(mx), fmy = static_cast<float>(my);
+            float a = ((s1.y - s2.y) * (fmx - s2.x) + (s2.x - s1.x) * (fmy - s2.y)) / denom;
+            float b = ((s2.y - s0.y) * (fmx - s2.x) + (s0.x - s2.x) * (fmy - s2.y)) / denom;
+            float c = 1.0f - a - b;
+            if (a >= -0.02f && b >= -0.02f && c >= -0.02f) {
+                float depth = a * s0.z + b * s1.z + c * s2.z;
+                if (depth < bestDepth) {
+                    bestDepth = depth;
+                    glm::vec3 hp = a * v0 + b * v1 + c * v2;
+                    res.hit = true;
+                    res.x = hp.x - n.x * 0.25f;
+                    res.y = hp.y - n.y * 0.25f;
+                    res.z = hp.z - n.z * 0.25f;
+                    res.pitch = std::max(-0.55f, std::min(0.55f, -std::atan2(n.z, n.y)));
+                    res.roll = std::max(-0.55f, std::min(0.55f, -std::atan2(n.x, n.y)));
+                }
+            }
+        }
+        return res;
+    }
+    void resyncAttachedTurretsToHull(SuperHeavyBlueprint& u)
+    {
+        for (int t = 0; t < std::min(4, u.numTurrets); ++t) {
+            auto sr = raycastBodyAtXZ(u, u.turrets[t].snapX, u.turrets[t].snapZ);
+            if (sr.hit) {
+                u.turrets[t].snapX = sr.x; u.turrets[t].snapY = sr.y; u.turrets[t].snapZ = sr.z;
+                u.turrets[t].pitch = sr.pitch; u.turrets[t].roll = sr.roll;
+            }
+        }
+    }
     void draw3DPreview(const SuperHeavyBlueprint& u, int cx, int cy, int boxW, int boxH) {
-        if (pickerMode == 0 && mouseDown(MOUSE_RMB)) {
+        if (pickerMode == 0 && pendingPlacementWeaponId.empty() && mouseDown(MOUSE_RMB)) {
             int mx = mouseX(), my = mouseY();
             if (!isDraggingView && mx >= cx - boxW / 2 && mx <= cx + boxW / 2 && my >= cy - boxH / 2 && my <= cy + boxH / 2) { isDraggingView = true; lastDragX = mx; lastDragY = my; }
-            if (isDraggingView) { autoSpin = false; previewYaw = std::fmod(previewYaw + (mx - lastDragX) * 0.65f + 360.0f, 360.0f); previewPitch = std::max(-75.0f, std::min(15.0f, previewPitch + (my - lastDragY) * 0.55f)); lastDragX = mx; lastDragY = my; }
+            if (isDraggingView) { autoSpin = false; previewYaw = std::fmod(previewYaw + (mx - lastDragX) * 0.65f + 360.0f, 360.0f); previewPitch = std::max(-75.0f, std::min(-8.0f, previewPitch + (my - lastDragY) * 0.55f)); lastDragX = mx; lastDragY = my; }
         } else { isDraggingView = false; }
         pie_UniTransBoxFill(cx - boxW / 2, cy - boxH / 2, cx + boxW / 2, cy + boxH / 2, pal_RGBA(8, 14, 24, 248));
         for (int gx = cx - boxW / 2 + 36; gx < cx + boxW / 2; gx += 36) iV_Line(gx, cy - boxH / 2 + 28, gx, cy + boxH / 2 - 44, pal_RGBA(22, 46, 74, 110));
@@ -155,22 +269,36 @@ namespace
         auto drawPart3D = [&](const iIMDBaseShape* baseSh, const glm::mat4& mat) { if (!baseSh) return; for (const iIMDShape* imd = baseSh->displayModel(); imd != nullptr; imd = imd->next.get()) pie_Draw3DButton(imd, imd->getTeamColourForModel(getPlayerColour(0)), mat, glm::mat4(1.f)); };
         if (pIdx >= 0) { glm::mat4 pMat = rootMat * glm::translate(glm::vec3(0.f, u.propOffsetY, u.propOffsetZ)) * glm::scale(glm::vec3(u.propScaleX, u.propScaleY, u.propScaleZ)); if (bIdx >= 0 && !asBodyStats[bIdx].ppIMDList.empty()) { drawPart3D(asBodyStats[bIdx].ppIMDList[pIdx * NUM_PROP_SIDES + LEFT_PROP], pMat); drawPart3D(asBodyStats[bIdx].ppIMDList[pIdx * NUM_PROP_SIDES + RIGHT_PROP], pMat); } else { drawPart3D(asPropulsionStats[pIdx].pIMD, pMat); } }
         if (bIdx >= 0) drawPart3D(asBodyStats[bIdx].pIMD, rootMat * glm::translate(glm::vec3(0.f, u.bodyOffsetY, u.bodyOffsetZ)) * glm::scale(glm::vec3(u.bodyScaleX, u.bodyScaleY, u.bodyScaleZ)));
-        for (int t = 0; t < std::min(4, u.numTurrets); ++t) { int wIdx = getCompFromID(COMP_WEAPON, WzString::fromUtf8(u.turrets[t].weaponId)); if (wIdx >= 0) { glm::mat4 tMat = rootMat * glm::translate(glm::vec3(u.turrets[t].snapX, u.bodyOffsetY + u.turrets[t].snapY, u.bodyOffsetZ + u.turrets[t].snapZ)) * glm::scale(glm::vec3(u.turrets[t].scale)); drawPart3D(asWeaponStats[wIdx].pMountGraphic, tMat); drawPart3D(asWeaponStats[wIdx].pIMD, tMat); } }
+        for (int t = 0; t < std::min(4, u.numTurrets); ++t) { WzString wid = WzString::fromUtf8(u.turrets[t].weaponId); glm::mat4 tMat = rootMat * glm::translate(glm::vec3(u.turrets[t].snapX, u.bodyOffsetY + u.turrets[t].snapY, u.bodyOffsetZ + u.turrets[t].snapZ)) * glm::rotate(u.turrets[t].pitch, glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(u.turrets[t].roll, glm::vec3(0.f, 0.f, 1.f)) * glm::scale(glm::vec3(u.turrets[t].scale)); int wIdx = getCompFromID(COMP_WEAPON, wid); if (wIdx >= 0) { drawPart3D(asWeaponStats[wIdx].pMountGraphic, tMat); drawPart3D(asWeaponStats[wIdx].pIMD, tMat); } else if ((wIdx = getCompFromID(COMP_SENSOR, wid)) >= 0) { drawPart3D(asSensorStats[wIdx].pMountGraphic, tMat); drawPart3D(asSensorStats[wIdx].pIMD, tMat); } else if ((wIdx = getCompFromID(COMP_REPAIRUNIT, wid)) >= 0) { drawPart3D(asRepairStats[wIdx].pMountGraphic, tMat); drawPart3D(asRepairStats[wIdx].pIMD, tMat); } else if ((wIdx = getCompFromID(COMP_CONSTRUCT, wid)) >= 0) { drawPart3D(asConstructStats[wIdx].pMountGraphic, tMat); drawPart3D(asConstructStats[wIdx].pIMD, tMat); } else if ((wIdx = getCompFromID(COMP_ECM, wid)) >= 0) { drawPart3D(asECMStats[wIdx].pMountGraphic, tMat); drawPart3D(asECMStats[wIdx].pIMD, tMat); } else if ((wIdx = getCompFromID(COMP_BRAIN, wid)) >= 0 && asBrainStats[wIdx].psWeaponStat) { drawPart3D(asBrainStats[wIdx].psWeaponStat->pMountGraphic, tMat); drawPart3D(asBrainStats[wIdx].psWeaponStat->pIMD, tMat); } }
         pie_BeginInterface(); pie_SetGeometricOffset(pie_GetVideoBufferWidth() / 2, pie_GetVideoBufferHeight() / 2);
-        if (bIdx >= 0 && pickerMode == 0) {
-            float yawRad = previewYaw * 3.14159265f / 180.0f, pitchRad = -previewPitch * 3.14159265f / 180.0f, cosY = std::cos(yawRad), sinY = std::sin(yawRad), cosP = std::cos(pitchRad), sinP = std::sin(pitchRad), pxScale = 2.45f * previewZoom;
-            for (int n = 0; n < 9; ++n) {
-                float hx = kHullNodes[n].nx * 15.0f * u.bodyScaleX, hy = kHullNodes[n].ny * 11.0f * u.bodyScaleY + u.bodyOffsetY, hz = kHullNodes[n].nz * 17.0f * u.bodyScaleZ + u.bodyOffsetZ;
-                float rx = hx * cosY + hz * sinY, rz = -hx * sinY + hz * cosY, ry = hy * cosP - rz * sinP;
-                int sx = cx + static_cast<int>(rx * pxScale), sy = baseCy - static_cast<int>(ry * pxScale), occ = -1;
-                for (int t = 0; t < u.numTurrets; ++t) if (std::hypot(u.turrets[t].snapX - hx, (u.turrets[t].snapZ + u.bodyOffsetZ) - hz) < 6.5f) { occ = t; break; }
-                PIELIGHT nc = (occ >= 0) ? pal_RGBA(75, 255, 145, 255) : pal_RGBA(255, 215, 70, 240), fc = (occ >= 0) ? pal_RGBA(20, 120, 65, 220) : pal_RGBA(40, 35, 12, 200);
-                pie_UniTransBoxFill(sx - 8, sy - 8, sx + 8, sy + 8, fc); iV_Box(sx - 8, sy - 8, sx + 8, sy + 8, nc); iV_Line(sx - 11, sy, sx + 11, sy, nc); iV_Line(sx, sy - 11, sx, sy + 11, nc);
-                clickBoxes.push_back({ 500 + n, sx - 11, sy - 11, 22, 22 });
-                if (occ >= 0) { std::string tag = "M" + std::to_string(occ + 1); iV_SetTextColour(pal_RGBA(120, 255, 175, 255)); iV_DrawText(tag.c_str(), sx + 10, sy + 4, font_regular); }
+        lastHoverHit = HullSurfaceHit();
+        if (pickerMode == 0 && !pendingPlacementWeaponId.empty()) {
+            int curMx = mouseX(), curMy = mouseY();
+            if (curMx >= cx - boxW / 2 && curMx <= cx + boxW / 2 && curMy >= cy - boxH / 2 && curMy <= cy + boxH / 2) {
+                lastHoverHit = raycastBodyAtScreen(u, rootMat, cx, baseCy, curMx, curMy);
+                if (lastHoverHit.hit) clickBoxes.push_back({ 550, cx - boxW / 2, cy - boxH / 2, boxW, boxH });
+            }
+            WzString pwid = WzString::fromUtf8(pendingPlacementWeaponId);
+            auto drawHeldTurret = [&](const glm::mat4& gMat, int gCx, int gCy) {
+                pie_Begin3DScene(); pie_SetGeometricOffset(gCx, gCy);
+                int wi = getCompFromID(COMP_WEAPON, pwid);
+                if (wi >= 0) { drawPart3D(asWeaponStats[wi].pMountGraphic, gMat); drawPart3D(asWeaponStats[wi].pIMD, gMat); }
+                else if ((wi = getCompFromID(COMP_SENSOR, pwid)) >= 0) { drawPart3D(asSensorStats[wi].pMountGraphic, gMat); drawPart3D(asSensorStats[wi].pIMD, gMat); }
+                else if ((wi = getCompFromID(COMP_REPAIRUNIT, pwid)) >= 0) { drawPart3D(asRepairStats[wi].pMountGraphic, gMat); drawPart3D(asRepairStats[wi].pIMD, gMat); }
+                else if ((wi = getCompFromID(COMP_CONSTRUCT, pwid)) >= 0) { drawPart3D(asConstructStats[wi].pMountGraphic, gMat); drawPart3D(asConstructStats[wi].pIMD, gMat); }
+                else if ((wi = getCompFromID(COMP_ECM, pwid)) >= 0) { drawPart3D(asECMStats[wi].pMountGraphic, gMat); drawPart3D(asECMStats[wi].pIMD, gMat); }
+                else if ((wi = getCompFromID(COMP_BRAIN, pwid)) >= 0 && asBrainStats[wi].psWeaponStat) { drawPart3D(asBrainStats[wi].psWeaponStat->pMountGraphic, gMat); drawPart3D(asBrainStats[wi].psWeaponStat->pIMD, gMat); }
+                pie_BeginInterface(); pie_SetGeometricOffset(pie_GetVideoBufferWidth() / 2, pie_GetVideoBufferHeight() / 2);
+            };
+            if (lastHoverHit.hit) {
+                glm::mat4 flushGhost = rootMat * glm::translate(glm::vec3(lastHoverHit.x, u.bodyOffsetY + lastHoverHit.y, u.bodyOffsetZ + lastHoverHit.z)) * glm::rotate(lastHoverHit.pitch, glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(lastHoverHit.roll, glm::vec3(0.f, 0.f, 1.f)) * glm::scale(glm::vec3(u.turrets[activeTurretSlot].scale));
+                drawHeldTurret(flushGhost, cx, baseCy);
+            } else {
+                glm::mat4 cursorGhost = glm::translate(glm::vec3(0.f, 0.f, 680.f)) * glm::rotate(-0.45f, glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(previewYaw * 3.14159265f / 180.f, glm::vec3(0.f, 1.f, 0.f)) * glm::scale(glm::vec3((DROID_BUT_SCALE * 1.65f) / 100.0f));
+                drawHeldTurret(cursorGhost, curMx, curMy);
             }
         }
-        iV_SetTextColour(pal_RGBA(175, 220, 255, 240)); iV_DrawText("HOLD RIGHT-CLICK & DRAG TO ORBIT 3D MODEL | CLICK YELLOW NODES TO ADD/SNAP TURRETS", cx - boxW / 2 + 12, cy - boxH / 2 + 18, font_regular);
+        iV_SetTextColour(pal_RGBA(175, 220, 255, 240)); iV_DrawText("HOLD RIGHT-CLICK & DRAG TO ORBIT | PICK WEAPON & CLICK HULL SURFACE TO PLACE (RMB TO CANCEL)", cx - boxW / 2 + 12, cy - boxH / 2 + 18, font_regular);
     }
 }
 void usaOpenUnitEditor() { usaEnsureOverworldDesignAssets(); usaLoadSuperHeavyBlueprints(); undoStack.clear(); redoStack.clear(); resetBlankDesign(); pickerMode = 0; renamingClass = false; editorOpen = true; }
@@ -296,7 +424,71 @@ void usaUpdateAndDrawUnitEditor()
     iV_DrawText(("SNAP X: " + std::to_string((int)tr.snapX)).c_str(), rx + 12, 326, font_regular); drawBtn(430, rx + 180, 310, 52, 24, "X -3", pal_RGBA(35, 55, 80, 240), pal_RGBA(100, 190, 255, 255)); drawBtn(431, rx + 238, 310, 56, 24, "X +3", pal_RGBA(35, 55, 80, 240), pal_RGBA(100, 190, 255, 255));
     iV_DrawText(("SNAP Y: " + std::to_string((int)tr.snapY)).c_str(), rx + 12, 358, font_regular); drawBtn(432, rx + 180, 342, 52, 24, "Y -3", pal_RGBA(35, 55, 80, 240), pal_RGBA(100, 190, 255, 255)); drawBtn(433, rx + 238, 342, 56, 24, "Y +3", pal_RGBA(35, 55, 80, 240), pal_RGBA(100, 190, 255, 255));
     iV_DrawText(("SNAP Z: " + std::to_string((int)tr.snapZ)).c_str(), rx + 12, 390, font_regular); drawBtn(434, rx + 180, 374, 52, 24, "Z -3", pal_RGBA(35, 55, 80, 240), pal_RGBA(100, 190, 255, 255)); drawBtn(435, rx + 238, 374, 56, 24, "Z +3", pal_RGBA(35, 55, 80, 240), pal_RGBA(100, 190, 255, 255));
-    if (pickerMode == 1 || pickerMode == 2) {
+    if (pickerMode == 4 || pickerMode == 5) { clickBoxes.clear(); }
+    if (pickerMode == 4 || pickerMode == 5)
+    {
+        int gx = 100, gy = 116, gw = sw - 200, gh = sh - 150;
+        pie_UniTransBoxFill(gx, gy, gx + gw, gy + gh, pal_RGBA(8, 16, 28, 252)); iV_Box(gx, gy, gx + gw, gy + gh, pal_RGBA(110, 215, 255, 255));
+        iV_SetTextColour(pal_RGBA(130, 225, 255, 255));
+        iV_DrawText(pickerMode == 4 ? "SELECT WEAPON / UTILITY CATEGORY (3D GALLERY)" : (std::string("CATEGORY: ") + kCatNames[selectedWeaponCategory] + " - SELECT MODULE").c_str(), gx + 18, gy + 26, font_large);
+        if (pickerMode == 5) drawBtn(898, gx + gw - 280, gy + 8, 162, 26, "< BACK TO CATEGORIES", pal_RGBA(26, 62, 98, 250), pal_RGBA(110, 200, 255, 255));
+        drawBtn(699, gx + gw - 110, gy + 8, 96, 26, "CLOSE [X]", pal_RGBA(115, 28, 28, 250), pal_RGBA(255, 110, 110, 255));
+        static float sWeapRot = 0.0f; sWeapRot = std::fmod(sWeapRot + 0.035f, 360.0f);
+        auto drawTurretCard3D = [&](int compType, const char* compId, int cxCard, int cyCard, int cw, int ch) {
+            int idx = getCompFromID(static_cast<COMPONENT_TYPE>(compType), WzString::fromUtf8(compId));
+            if (idx < 0 && compType != COMP_WEAPON) idx = getCompFromID(COMP_WEAPON, WzString::fromUtf8(compId));
+            if (idx < 0) return;
+            const iIMDBaseShape* mSh = nullptr; const iIMDBaseShape* tSh = nullptr;
+            if (compType == COMP_WEAPON) { mSh = asWeaponStats[idx].pMountGraphic; tSh = asWeaponStats[idx].pIMD; }
+            else if (compType == COMP_SENSOR) { mSh = asSensorStats[idx].pMountGraphic; tSh = asSensorStats[idx].pIMD; }
+            else if (compType == COMP_REPAIRUNIT) { mSh = asRepairStats[idx].pMountGraphic; tSh = asRepairStats[idx].pIMD; }
+            else if (compType == COMP_CONSTRUCT) { mSh = asConstructStats[idx].pMountGraphic; tSh = asConstructStats[idx].pIMD; }
+            else if (compType == COMP_ECM) { mSh = asECMStats[idx].pMountGraphic; tSh = asECMStats[idx].pIMD; }
+            else if (compType == COMP_BRAIN && asBrainStats[idx].psWeaponStat) { mSh = asBrainStats[idx].psWeaponStat->pMountGraphic; tSh = asBrainStats[idx].psWeaponStat->pIMD; }
+            const iIMDShape* rootImd = tSh ? tSh->displayModel() : (mSh ? mSh->displayModel() : nullptr);
+            if (!rootImd) return;
+            float rad = (rootImd->radius > 8) ? static_cast<float>(rootImd->radius) : 45.0f;
+            float fit = std::min(1.65f, std::max(0.75f, 68.0f / rad));
+            pie_Begin3DScene(); pie_SetGeometricOffset(cxCard + cw / 2, cyCard + ch / 2 - 6);
+            glm::mat4 m = glm::translate(glm::vec3(0.f, 0.f, 680.f)) * glm::rotate(-0.40f, glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(sWeapRot * 3.14159265f / 180.f, glm::vec3(0.f, 1.f, 0.f)) * glm::scale(glm::vec3((DROID_BUT_SCALE * fit) / 100.f));
+            auto drawChain = [&](const iIMDBaseShape* b) { if (!b) return; for (const iIMDShape* imd = b->displayModel(); imd != nullptr; imd = imd->next.get()) pie_Draw3DButton(imd, imd->getTeamColourForModel(getPlayerColour(0)), m, glm::mat4(1.f)); };
+            drawChain(mSh); drawChain(tSh);
+            pie_BeginInterface(); pie_SetGeometricOffset(pie_GetVideoBufferWidth() / 2, pie_GetVideoBufferHeight() / 2);
+        };
+        if (pickerMode == 4)
+        {
+            int cols = 4, cw = (gw - 24 - (cols - 1) * 12) / cols, ch = 175;
+            for (int c = 0; c < 8; ++c)
+            {
+                int col = c % cols, row = c / cols, cxCard = gx + 12 + col * (cw + 12), cyCard = gy + 46 + row * (ch + 14);
+                clickBoxes.push_back({ 800 + c, cxCard, cyCard, cw, ch });
+                pie_UniTransBoxFill(cxCard, cyCard, cxCard + cw, cyCard + ch, (c == 7) ? pal_RGBA(18, 42, 36, 245) : pal_RGBA(14, 28, 48, 245));
+                iV_Box(cxCard, cyCard, cxCard + cw, cyCard + ch, (c == 7) ? pal_RGBA(95, 240, 175, 240) : pal_RGBA(75, 165, 235, 240));
+                drawTurretCard3D(c == 7 ? COMP_SENSOR : COMP_WEAPON, kCatPreviewIds[c], cxCard, cyCard, cw, ch);
+                iV_SetTextColour(pal_RGBA(130, 230, 255, 255)); iV_DrawText(kCatNames[c], cxCard + 10, cyCard + ch - 24, font_regular);
+                iV_SetTextColour(pal_RGBA(175, 210, 245, 220)); iV_DrawText("CLICK TO BROWSE MODULES", cxCard + 10, cyCard + ch - 8, font_regular);
+            }
+        }
+        else
+        {
+            std::vector<int> matches; int totalMods = static_cast<int>(sizeof(kTurretModules) / sizeof(kTurretModules[0]));
+            for (int i = 0; i < totalMods; ++i) if (kTurretModules[i].cat == selectedWeaponCategory) matches.push_back(i);
+            int cols = 4, cw = (gw - 24 - (cols - 1) * 12) / cols, ch = 172;
+            for (size_t mIdx = 0; mIdx < matches.size() && mIdx < 8; ++mIdx)
+            {
+                const auto& mod = kTurretModules[matches[mIdx]];
+                int col = static_cast<int>(mIdx) % cols, row = static_cast<int>(mIdx) / cols, cxCard = gx + 12 + col * (cw + 12), cyCard = gy + 46 + row * (ch + 14);
+                bool isSel = (tr.weaponId == mod.id);
+                clickBoxes.push_back({ 810 + matches[mIdx], cxCard, cyCard, cw, ch });
+                pie_UniTransBoxFill(cxCard, cyCard, cxCard + cw, cyCard + ch, isSel ? pal_RGBA(22, 72, 108, 245) : pal_RGBA(14, 26, 44, 245));
+                iV_Box(cxCard, cyCard, cxCard + cw, cyCard + ch, isSel ? pal_RGBA(110, 245, 175, 255) : pal_RGBA(65, 145, 215, 230));
+                drawTurretCard3D(mod.compType, mod.id, cxCard, cyCard, cw, ch);
+                iV_SetTextColour(WZCOL_WHITE); iV_DrawText(mod.label, cxCard + 10, cyCard + ch - 24, font_regular);
+                iV_SetTextColour(pal_RGBA(150, 200, 240, 230)); iV_DrawText(mod.id, cxCard + 10, cyCard + ch - 8, font_regular);
+            }
+        }
+    }
+    else if (pickerMode == 1 || pickerMode == 2) { clickBoxes.clear();
         int gx = 160, gy = 116, gw = sw - 320, gh = sh - 150;
         pie_UniTransBoxFill(gx, gy, gx + gw, gy + gh, pal_RGBA(8, 16, 28, 252)); iV_Box(gx, gy, gx + gw, gy + gh, pal_RGBA(110, 215, 255, 255));
         iV_SetTextColour(pal_RGBA(130, 225, 255, 255)); iV_DrawText(pickerMode == 1 ? "SELECT CHASSIS MODEL (3D RENDERED GALLERY)" : "SELECT PROPULSION SYSTEM (3D RENDERED GALLERY)", gx + 18, gy + 26, font_large);
@@ -327,7 +519,7 @@ void usaUpdateAndDrawUnitEditor()
             iV_SetTextColour(pal_RGBA(150, 200, 240, 230)); iV_DrawText(itemId.c_str(), cxCard + 8, cyCard + ch - 8, font_regular);
         }
     }
-    else if (pickerMode == 3)
+    else if (pickerMode == 3) { clickBoxes.clear(); } if (pickerMode == 3)
     {
         int gx = 72, gy = 118, gw = sw - 144, gh = sh - 156;
         pie_UniTransBoxFill(gx, gy, gx + gw, gy + gh, pal_RGBA(8, 16, 28, 252)); iV_Box(gx, gy, gx + gw, gy + gh, pal_RGBA(110, 215, 255, 255));
@@ -384,6 +576,25 @@ void usaUpdateAndDrawUnitEditor()
             drawBtn(791, mx0 + 352, my0 + 94, 240, 30, "CANCEL", pal_RGBA(32, 54, 82, 245), pal_RGBA(110, 195, 255, 255));
         }
     }
+    if (pickerMode == 0 && !pendingPlacementWeaponId.empty())
+    {
+        int curMx = mouseX(), curMy = mouseY();
+        WzString pwid = WzString::fromUtf8(pendingPlacementWeaponId);
+        float cSc = (DROID_BUT_SCALE * 1.75f) / 100.0f;
+        glm::mat4 cursorGhost = glm::translate(glm::vec3(0.f, 0.f, 680.f)) * glm::rotate(-0.42f, glm::vec3(1.f, 0.f, 0.f)) * glm::rotate(previewYaw * 3.14159265f / 180.f, glm::vec3(0.f, 1.f, 0.f)) * glm::scale(glm::vec3(cSc));
+        pie_Begin3DScene(); pie_SetGeometricOffset(curMx, curMy);
+        auto drawCursorPart = [&](const iIMDBaseShape* bSh) { if (!bSh) return; for (const iIMDShape* imd = bSh->displayModel(); imd != nullptr; imd = imd->next.get()) pie_Draw3DButton(imd, imd->getTeamColourForModel(getPlayerColour(0)), cursorGhost, glm::mat4(1.f)); };
+        int wi = getCompFromID(COMP_WEAPON, pwid);
+        if (wi >= 0) { drawCursorPart(asWeaponStats[wi].pMountGraphic); drawCursorPart(asWeaponStats[wi].pIMD); }
+        else if ((wi = getCompFromID(COMP_SENSOR, pwid)) >= 0) { drawCursorPart(asSensorStats[wi].pMountGraphic); drawCursorPart(asSensorStats[wi].pIMD); }
+        else if ((wi = getCompFromID(COMP_REPAIRUNIT, pwid)) >= 0) { drawCursorPart(asRepairStats[wi].pMountGraphic); drawCursorPart(asRepairStats[wi].pIMD); }
+        else if ((wi = getCompFromID(COMP_CONSTRUCT, pwid)) >= 0) { drawCursorPart(asConstructStats[wi].pMountGraphic); drawCursorPart(asConstructStats[wi].pIMD); }
+        else if ((wi = getCompFromID(COMP_ECM, pwid)) >= 0) { drawCursorPart(asECMStats[wi].pMountGraphic); drawCursorPart(asECMStats[wi].pIMD); }
+        else if ((wi = getCompFromID(COMP_BRAIN, pwid)) >= 0 && asBrainStats[wi].psWeaponStat) { drawCursorPart(asBrainStats[wi].psWeaponStat->pMountGraphic); drawCursorPart(asBrainStats[wi].psWeaponStat->pIMD); }
+        pie_BeginInterface(); pie_SetGeometricOffset(pie_GetVideoBufferWidth() / 2, pie_GetVideoBufferHeight() / 2);
+        iV_SetTextColour(pal_RGBA(120, 255, 210, 255));
+        iV_DrawText(("PLACING: " + pendingPlacementLabel + " (CLICK ANY HULL CROSSHAIR)").c_str(), curMx + 18, curMy - 8, font_regular);
+    }
 }
 bool usaHandleUnitEditorClick(int mx, int my, bool rightClick)
 {
@@ -395,7 +606,7 @@ bool usaHandleUnitEditorClick(int mx, int my, bool rightClick)
         if (maxT == 4 && u.numTurrets == 3) u.numTurrets = 4;
         if (u.numTurrets > maxT) u.numTurrets = maxT;
         activeTurretSlot = std::min(activeTurretSlot, std::max(0, u.numTurrets - 1));
-        if (u.matchChassisScale) { u.propScaleX = u.bodyScaleX; u.propScaleY = std::max(1.0f, u.bodyScaleY * 0.94f); u.propScaleZ = u.bodyScaleZ; u.bodyOffsetY = (u.propScaleY - 1.0f) * 12.0f; u.propOffsetY = 0.0f; u.propOffsetZ = 0.0f; }
+        resyncAttachedTurretsToHull(u); if (u.matchChassisScale) { u.propScaleX = u.bodyScaleX; u.propScaleY = std::max(1.0f, u.bodyScaleY * 0.94f); u.propScaleZ = u.bodyScaleZ; u.bodyOffsetY = (u.propScaleY - 1.0f) * 12.0f; u.propOffsetY = 0.0f; u.propOffsetZ = 0.0f; }
     };
     for (const auto& b : clickBoxes) {
         if (mx < b.x || mx > b.x + b.w || my < b.y || my > b.y + b.h) continue;
@@ -429,18 +640,20 @@ bool usaHandleUnitEditorClick(int mx, int my, bool rightClick)
         case 401: u.numTurrets = std::max(0, std::min(4, u.numTurrets - (rightClick ? -1 : 1))); activeTurretSlot = std::min(activeTurretSlot, std::max(0, u.numTurrets - 1)); break;
         case 402: { int maxT = (std::max({ u.bodyScaleX, u.bodyScaleY, u.bodyScaleZ }) >= 1.60f) ? 4 : 3; u.numTurrets = std::max(0, std::min(maxT, u.numTurrets + (rightClick ? -1 : 1))); break; }
         case 410: case 411: case 412: case 413: activeTurretSlot = b.id - 410; break;
-        case 420: { int idx = 0; for (int i = 0; i < 9; ++i) if (tr.weaponId == kWeapons[i]) { idx = rightClick ? ((i + 8) % 9) : ((i + 1) % 9); break; } tr.weaponId = kWeapons[idx]; statusBanner = std::string("WEAPON: ") + kWeapNames[idx]; break; }
+        case 420: pickerMode = (pickerMode == 4 || pickerMode == 5) ? 0 : 4; statusBanner = "SELECT WEAPON OR UTILITY CATEGORY"; break;
         case 421: tr.presetIndex = (tr.presetIndex + (rightClick ? 5 : 1)) % 6; applyTurretPreset(u, activeTurretSlot); statusBanner = std::string("PRESET: ") + kPresetNames[tr.presetIndex]; break;
         case 422: tr.scale = std::max(0.85f, std::min(2.50f, tr.scale - 0.15f * dir)); break;
         case 423: tr.scale = std::max(0.85f, std::min(2.50f, tr.scale + 0.15f * dir)); break;
         case 430: tr.snapX -= 3.0f * dir; break; case 431: tr.snapX += 3.0f * dir; break;
         case 432: tr.snapY -= 3.0f * dir; break; case 433: tr.snapY += 3.0f * dir; break;
         case 434: tr.snapZ -= 3.0f * dir; break; case 435: tr.snapZ += 3.0f * dir; break;
-        case 500: case 501: case 502: case 503: case 504: case 505: case 506: case 507: case 508: { int ni = b.id - 500; if (activeTurretSlot >= u.numTurrets) u.numTurrets = activeTurretSlot + 1; auto& sr = u.turrets[activeTurretSlot]; sr.snapX = kHullNodes[ni].nx * 15.0f * u.bodyScaleX; sr.snapY = kHullNodes[ni].ny * 11.0f * u.bodyScaleY; sr.snapZ = kHullNodes[ni].nz * 17.0f * u.bodyScaleZ; statusBanner = std::string("MOUNT ") + std::to_string(activeTurretSlot + 1) + " SNAPPED TO " + kHullNodes[ni].label; break; }
-        case 699: deleteConfirmIdx = -1; pickerMode = 0; break; case 790: if (deleteConfirmIdx >= 0 && deleteConfirmIdx < static_cast<int>(blueprints.size())) { statusBanner = "DELETED DESIGN: " + blueprints[deleteConfirmIdx].name; blueprints.erase(blueprints.begin() + deleteConfirmIdx); usaSaveSuperHeavyBlueprints(); } deleteConfirmIdx = -1; break; case 791: deleteConfirmIdx = -1; break;
-        case 600: case 601: case 602: case 603: case 604: case 605: case 606: case 607: case 608: case 609: { int idx = b.id - 600; u.bodyId = kBodies[idx]; pickerMode = 0; statusBanner = std::string("EQUIPPED HULL: ") + kBodyNames[idx]; break; }
+        case 550: { if (!pendingPlacementWeaponId.empty() && lastHoverHit.hit) { int targetSlot = activeTurretSlot; int occ = -1; for (int t = 0; t < u.numTurrets; ++t) if (std::hypot(u.turrets[t].snapX - lastHoverHit.x, u.turrets[t].snapZ - lastHoverHit.z) < 5.5f) { occ = t; break; } int maxT = (std::max({ u.bodyScaleX, u.bodyScaleY, u.bodyScaleZ }) >= 1.60f) ? 4 : 3; if (occ >= 0) targetSlot = occ; else if (u.numTurrets < maxT) { targetSlot = u.numTurrets; u.numTurrets++; } activeTurretSlot = targetSlot; auto& sr = u.turrets[targetSlot]; sr.nodeIndex = -1; sr.weaponId = pendingPlacementWeaponId; sr.snapX = lastHoverHit.x; sr.snapY = lastHoverHit.y; sr.snapZ = lastHoverHit.z; sr.pitch = lastHoverHit.pitch; sr.roll = lastHoverHit.roll; statusBanner = "PLACED " + pendingPlacementLabel + " ON MOUNT " + std::to_string(targetSlot + 1) + " (FLUSH TO BODY)"; pendingPlacementWeaponId.clear(); } break; }
+        case 699: deleteConfirmIdx = -1; pickerMode = 0; break;
+        case 898: pickerMode = 4; statusBanner = "SELECT WEAPON OR UTILITY CATEGORY"; break;
+        case 800: case 801: case 802: case 803: case 804: case 805: case 806: case 807: selectedWeaponCategory = b.id - 800; pickerMode = 5; statusBanner = std::string("CATEGORY: ") + kCatNames[selectedWeaponCategory]; break; case 790: if (deleteConfirmIdx >= 0 && deleteConfirmIdx < static_cast<int>(blueprints.size())) { statusBanner = "DELETED DESIGN: " + blueprints[deleteConfirmIdx].name; blueprints.erase(blueprints.begin() + deleteConfirmIdx); usaSaveSuperHeavyBlueprints(); } deleteConfirmIdx = -1; break; case 791: deleteConfirmIdx = -1; break;
+        case 600: case 601: case 602: case 603: case 604: case 605: case 606: case 607: case 608: case 609: { int idx = b.id - 600; u.bodyId = kBodies[idx]; resyncAttachedTurretsToHull(u); pickerMode = 0; statusBanner = std::string("EQUIPPED HULL: ") + kBodyNames[idx]; break; }
         case 650: case 651: case 652: case 653: case 654: { int idx = b.id - 650; u.propId = kProps[idx]; pickerMode = 0; syncScaleRules(); statusBanner = std::string("EQUIPPED DRIVE: ") + kPropNames[idx]; break; }
-        default: if (b.id >= 750 && b.id < 750 + static_cast<int>(blueprints.size())) { deleteConfirmIdx = b.id - 750; } else if (deleteConfirmIdx < 0 && b.id >= 700 && b.id < 700 + static_cast<int>(blueprints.size())) { activeDesign = blueprints[b.id - 700]; activeTurretSlot = 0; pickerMode = 0; statusBanner = "LOADED SAVED DESIGN: " + activeDesign.name; } break;
+        default: if (b.id >= 810 && b.id < 890) { int mIdx = b.id - 810; pendingPlacementWeaponId = kTurretModules[mIdx].id; pendingPlacementLabel = kTurretModules[mIdx].label; pickerMode = 0; statusBanner = std::string("ARMED: ") + pendingPlacementLabel + " - CLICK ANY GLOWING HULL SNAP POINT TO MOUNT"; } else if (b.id >= 750 && b.id < 750 + static_cast<int>(blueprints.size())) { deleteConfirmIdx = b.id - 750; } else if (deleteConfirmIdx < 0 && b.id >= 700 && b.id < 700 + static_cast<int>(blueprints.size())) { activeDesign = blueprints[b.id - 700]; activeTurretSlot = 0; pickerMode = 0; statusBanner = "LOADED SAVED DESIGN: " + activeDesign.name; } break;
         }
         return true;
     }
